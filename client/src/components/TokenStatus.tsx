@@ -7,7 +7,13 @@ export default function TokenStatus() {
     <div style={{ display: 'grid', gap: 6, fontSize: 14 }}>
       <div>
         <strong>MusicKit:</strong>{' '}
-        {error ? <span style={{ color: 'var(--color-error)' }}>error — {error}</span> : isReady ? 'ready' : 'loading…'}
+        {error ? (
+          <span style={{ color: 'var(--color-error)' }}>error — {error}</span>
+        ) : isReady ? (
+          'ready'
+        ) : (
+          'loading…'
+        )}
       </div>
       <div>
         <strong>Storefront:</strong> {storefront}

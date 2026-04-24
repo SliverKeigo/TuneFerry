@@ -140,8 +140,18 @@ The backend never persists the Music User Token — it only forwards it to `api.
 npm run dev          # vercel dev + vite in parallel
 npm run build        # build the client (api is built by Vercel on deploy)
 npm run typecheck    # api + client in parallel
+npm run check        # Biome lint + format + import sort (whole repo)
+npm run check:fix    # same, with safe autofixes applied
+npm run validate     # check + typecheck in parallel (what CI should run)
 npm run clean        # rm client/dist
 ```
+
+## Code Quality
+
+- **Biome** handles lint, formatter, and import sort in a single binary. Config: [`biome.json`](./biome.json).
+- **TypeScript strict mode** across `lib/`, `api/`, and `client/`.
+- **Pre-commit gate:** `.husky/pre-commit` runs `npm run check` (Biome, whole repo) and `npm run typecheck` before every commit. The hook is installed automatically by `npm install` via husky's `prepare` script. If either check fails, the commit is rejected.
+- If you need to bypass the hook for an emergency, `git commit --no-verify` still works — use sparingly.
 
 ## Roadmap
 

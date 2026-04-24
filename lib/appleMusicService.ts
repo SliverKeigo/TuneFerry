@@ -1,5 +1,5 @@
-import { HttpError } from './httpError';
 import { getDeveloperToken } from './developerTokenService';
+import { HttpError } from './httpError';
 import type {
   AppleMusicLibraryPlaylistsResponse,
   AppleMusicLibrarySearchResponse,
@@ -96,7 +96,8 @@ export async function searchLibrary(params: {
   musicUserToken: string | undefined;
 }): Promise<AppleMusicLibrarySearchResponse> {
   const userToken = requireMusicUserToken(params.musicUserToken);
-  const types = params.types?.trim() || 'library-songs,library-albums,library-artists,library-playlists';
+  const types =
+    params.types?.trim() || 'library-songs,library-albums,library-artists,library-playlists';
   return appleFetch<AppleMusicLibrarySearchResponse>('/me/library/search', {
     query: {
       term: params.term,

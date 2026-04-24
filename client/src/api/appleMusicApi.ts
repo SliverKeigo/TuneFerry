@@ -1,8 +1,8 @@
 import type {
+  ApiErrorShape,
   AppleMusicLibraryPlaylistsResponse,
   AppleMusicLibrarySearchResponse,
   AppleMusicSearchResponse,
-  ApiErrorShape,
   LibraryAddResourceType,
 } from '../types/appleMusic';
 

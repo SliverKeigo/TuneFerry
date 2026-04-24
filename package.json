@@ -3,9 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "description": "Web app to connect Apple Music, search the catalog & your library, and organize it. Deployed as a single Vercel project.",
-  "workspaces": [
-    "client"
-  ],
+  "workspaces": ["client"],
   "scripts": {
     "dev": "npm-run-all --parallel dev:api dev:client",
     "dev:api": "vercel dev --listen 3000",
@@ -14,7 +12,12 @@
     "typecheck": "npm-run-all --parallel typecheck:api typecheck:client",
     "typecheck:api": "tsc -p tsconfig.json --noEmit",
     "typecheck:client": "npm --workspace client run typecheck",
-    "clean": "rimraf client/dist"
+    "check": "biome check .",
+    "check:fix": "biome check --write .",
+    "format": "biome format --write .",
+    "validate": "npm-run-all --parallel check typecheck",
+    "clean": "rimraf client/dist",
+    "prepare": "husky"
   },
   "dependencies": {
     "@vercel/node": "^3.2.29",
@@ -22,8 +25,10 @@
     "jsonwebtoken": "^9.0.2"
   },
   "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
     "@types/jsonwebtoken": "^9.0.6",
     "@types/node": "^20.11.30",
+    "husky": "^9.1.7",
     "npm-run-all": "^4.1.5",
     "rimraf": "^5.0.5",
     "typescript": "^5.4.3",

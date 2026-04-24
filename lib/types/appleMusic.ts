@@ -68,12 +68,7 @@ export interface LibraryPlaylistAttributes {
   playParams?: Record<string, unknown>;
 }
 
-export type CatalogSearchResultType =
-  | 'songs'
-  | 'albums'
-  | 'artists'
-  | 'playlists'
-  | 'music-videos';
+export type CatalogSearchResultType = 'songs' | 'albums' | 'artists' | 'playlists' | 'music-videos';
 
 export interface AppleMusicSearchResponse {
   results: Partial<

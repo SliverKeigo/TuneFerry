@@ -26,10 +26,7 @@ export function parseAddToLibraryBody(raw: unknown): AddToLibraryInput {
   const { type, ids } = raw as { type?: unknown; ids?: unknown };
 
   if (typeof type !== 'string' || !LIBRARY_ADD_TYPE_SET.has(type as LibraryAddResourceType)) {
-    throw new HttpError(
-      400,
-      `Invalid body.type. Expected one of: ${LIBRARY_ADD_TYPES.join(', ')}`,
-    );
+    throw new HttpError(400, `Invalid body.type. Expected one of: ${LIBRARY_ADD_TYPES.join(', ')}`);
   }
   if (!Array.isArray(ids) || ids.length === 0) {
     throw new HttpError(400, 'Invalid body.ids. Expected a non-empty array of strings.');

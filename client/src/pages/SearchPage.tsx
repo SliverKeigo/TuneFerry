@@ -1,5 +1,5 @@
-import { FormEvent, useCallback, useMemo, useState } from 'react';
-import { addToLibrary, ApiError, searchCatalog } from '../api/appleMusicApi';
+import { type FormEvent, useCallback, useMemo, useState } from 'react';
+import { ApiError, addToLibrary, searchCatalog } from '../api/appleMusicApi';
 import SearchResultCard from '../components/SearchResultCard';
 import { useMusicKit } from '../hooks/useMusicKit';
 import type {
@@ -73,7 +73,12 @@ export default function SearchPage() {
         const data = await searchCatalog({ term: query, storefront });
         setResults(data.results);
       } catch (err) {
-        const msg = err instanceof ApiError ? err.message : err instanceof Error ? err.message : 'Search failed';
+        const msg =
+          err instanceof ApiError
+            ? err.message
+            : err instanceof Error
+              ? err.message
+              : 'Search failed';
         setError(msg);
       } finally {
         setLoading(false);
@@ -100,7 +105,12 @@ export default function SearchPage() {
         await addToLibrary({ type: libType, ids: [resource.id], musicUserToken });
         setAddState({ status: 'success', key });
       } catch (err) {
-        const msg = err instanceof ApiError ? err.message : err instanceof Error ? err.message : 'Failed to add';
+        const msg =
+          err instanceof ApiError
+            ? err.message
+            : err instanceof Error
+              ? err.message
+              : 'Failed to add';
         setAddState({ status: 'error', key, message: msg });
       }
     },
@@ -123,7 +133,6 @@ export default function SearchPage() {
           value={term}
           placeholder="Search songs, albums, artists, playlists…"
           onChange={(ev) => setTerm(ev.target.value)}
-          autoFocus
         />
         <button className="btn btn-primary" type="submit" disabled={loading || !term.trim()}>
           {loading ? 'Searching…' : 'Search'}
@@ -133,8 +142,16 @@ export default function SearchPage() {
       {error && <div className="error-banner">{error}</div>}
 
       {!isAuthorized && (
-        <div className="success-banner" style={{ color: 'var(--color-warning)', borderColor: 'rgba(250, 204, 21, .4)', background: 'rgba(250, 204, 21, .08)' }}>
-          You can search without connecting, but adding to your library requires connecting Apple Music first.
+        <div
+          className="success-banner"
+          style={{
+            color: 'var(--color-warning)',
+            borderColor: 'rgba(250, 204, 21, .4)',
+            background: 'rgba(250, 204, 21, .08)',
+          }}
+        >
+          You can search without connecting, but adding to your library requires connecting Apple
+          Music first.
         </div>
       )}
 

@@ -66,12 +66,7 @@ export interface LibraryPlaylistAttributes {
 
 export type LibraryPlaylist = AppleMusicResource<LibraryPlaylistAttributes>;
 
-export type CatalogSearchResultType =
-  | 'songs'
-  | 'albums'
-  | 'artists'
-  | 'playlists'
-  | 'music-videos';
+export type CatalogSearchResultType = 'songs' | 'albums' | 'artists' | 'playlists' | 'music-videos';
 
 export interface AppleMusicSearchResponse {
   results: Partial<

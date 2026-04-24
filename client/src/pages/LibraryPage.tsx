@@ -1,9 +1,5 @@
-import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  ApiError,
-  fetchLibraryPlaylists,
-  searchLibrary,
-} from '../api/appleMusicApi';
+import { type FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import { ApiError, fetchLibraryPlaylists, searchLibrary } from '../api/appleMusicApi';
 import SearchResultCard from '../components/SearchResultCard';
 import { useMusicKit } from '../hooks/useMusicKit';
 import type {
@@ -34,7 +30,12 @@ export default function LibraryPage() {
       const data = await fetchLibraryPlaylists({ musicUserToken });
       setPlaylists(data.data ?? []);
     } catch (err) {
-      const msg = err instanceof ApiError ? err.message : err instanceof Error ? err.message : 'Failed to load playlists';
+      const msg =
+        err instanceof ApiError
+          ? err.message
+          : err instanceof Error
+            ? err.message
+            : 'Failed to load playlists';
       setPlaylistsError(msg);
     } finally {
       setPlaylistsLoading(false);
@@ -65,7 +66,12 @@ export default function LibraryPage() {
         const data = await searchLibrary({ term: query, musicUserToken });
         setSearchResults(data.results);
       } catch (err) {
-        const msg = err instanceof ApiError ? err.message : err instanceof Error ? err.message : 'Library search failed';
+        const msg =
+          err instanceof ApiError
+            ? err.message
+            : err instanceof Error
+              ? err.message
+              : 'Library search failed';
         setSearchError(msg);
       } finally {
         setSearchLoading(false);
@@ -91,7 +97,14 @@ export default function LibraryPage() {
       </header>
 
       {!isAuthorized && (
-        <div className="error-banner" style={{ color: 'var(--color-warning)', borderColor: 'rgba(250, 204, 21, .4)', background: 'rgba(250, 204, 21, .08)' }}>
+        <div
+          className="error-banner"
+          style={{
+            color: 'var(--color-warning)',
+            borderColor: 'rgba(250, 204, 21, .4)',
+            background: 'rgba(250, 204, 21, .08)',
+          }}
+        >
           Connect Apple Music on the Home page to enable library features.
         </div>
       )}
@@ -122,10 +135,7 @@ export default function LibraryPage() {
         {flatSearchHits.length > 0 && (
           <div style={{ display: 'grid', gap: 8 }}>
             {flatSearchHits.map((resource) => (
-              <SearchResultCard
-                key={`${resource.type}:${resource.id}`}
-                resource={resource}
-              />
+              <SearchResultCard key={`${resource.type}:${resource.id}`} resource={resource} />
             ))}
           </div>
         )}

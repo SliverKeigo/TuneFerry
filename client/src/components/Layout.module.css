@@ -50,7 +50,10 @@
   font-size: 14px;
   transition: background-color .15s, color .15s;
 }
-.navLink:hover { background: var(--color-surface); color: var(--color-text); }
+.navLink:hover {
+  background: var(--color-surface);
+  color: var(--color-text);
+}
 .navLinkActive {
   background: var(--color-surface);
   color: var(--color-text);
@@ -70,7 +73,9 @@
   border-radius: 50%;
   background: var(--color-text-muted);
 }
-.dotConnected { background: var(--color-success); }
+.dotConnected {
+  background: var(--color-success);
+}
 
 .main {
   flex: 1;

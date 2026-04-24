@@ -1,0 +1,13 @@
+#!/usr/bin/env sh
+# Fail the commit unless Biome (lint + format) AND tsc (typecheck) both pass
+# against the whole repo, not just the staged diff — per project rule.
+
+set -e
+
+echo "[pre-commit] biome check"
+npm run check
+
+echo "[pre-commit] typecheck"
+npm run typecheck
+
+echo "[pre-commit] ok"

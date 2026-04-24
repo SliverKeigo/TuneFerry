@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
-import { useMusicKit } from '../hooks/useMusicKit';
 import TokenStatus from '../components/TokenStatus';
+import { useMusicKit } from '../hooks/useMusicKit';
 
 export default function HomePage() {
   const { isReady, isAuthorized, authorize, unauthorize, error } = useMusicKit();
@@ -10,19 +10,14 @@ export default function HomePage() {
       <header>
         <h1 style={{ margin: 0, fontSize: 32 }}>Apple Music Library Organizer</h1>
         <p style={{ color: 'var(--color-text-muted)', marginTop: 8 }}>
-          Connect your Apple Music account, search the catalog, inspect your library, and add
-          tracks with one click. MVP build — more organizer tools coming.
+          Connect your Apple Music account, search the catalog, inspect your library, and add tracks
+          with one click. MVP build — more organizer tools coming.
         </p>
       </header>
 
       <section style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
         {!isAuthorized ? (
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={authorize}
-            disabled={!isReady}
-          >
+          <button type="button" className="btn btn-primary" onClick={authorize} disabled={!isReady}>
             {isReady ? 'Connect Apple Music' : 'Initialising MusicKit…'}
           </button>
         ) : (
@@ -55,7 +50,9 @@ export default function HomePage() {
       <section>
         <h2 style={{ fontSize: 18 }}>What you can do</h2>
         <ul style={{ lineHeight: 1.7, paddingLeft: 18, color: 'var(--color-text-muted)' }}>
-          <li>Search the Apple Music catalog and add songs / albums / playlists to your library.</li>
+          <li>
+            Search the Apple Music catalog and add songs / albums / playlists to your library.
+          </li>
           <li>Search inside your own library to see what you already have.</li>
           <li>Browse the playlists you already own.</li>
           <li>Use the Organizer page to plan future cleanup actions (more soon).</li>

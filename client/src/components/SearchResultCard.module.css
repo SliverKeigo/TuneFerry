@@ -10,7 +10,9 @@
   transition: border-color .15s, transform .15s;
 }
 
-.card:hover { border-color: var(--color-accent); }
+.card:hover {
+  border-color: var(--color-accent);
+}
 
 .art {
   width: 72px;
@@ -20,9 +22,18 @@
   overflow: hidden;
   flex-shrink: 0;
 }
-.art img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
 
-.body { min-width: 0; display: grid; gap: 4px; }
+.body {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
 
 .title {
   font-weight: 600;
@@ -48,4 +59,8 @@
   color: var(--color-text-muted);
 }
 
-.actions { display: flex; gap: 6px; align-items: center; }
+.actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}

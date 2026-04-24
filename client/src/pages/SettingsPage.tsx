@@ -19,7 +19,8 @@ export default function SettingsPage() {
       <header>
         <h1 style={{ margin: 0 }}>Settings</h1>
         <p style={{ color: 'var(--color-text-muted)', marginTop: 6 }}>
-          Storefront is MusicKit&apos;s &quot;country / region code&quot;. Changing it reloads the app.
+          Storefront is MusicKit&apos;s &quot;country / region code&quot;. Changing it reloads the
+          app.
         </p>
       </header>
 

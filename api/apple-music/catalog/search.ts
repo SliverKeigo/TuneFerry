@@ -1,12 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { searchCatalog } from '../../../lib/appleMusicService';
+import { pickInt, pickQuery, requireMethod, withErrorHandler } from '../../../lib/handler';
 import { HttpError } from '../../../lib/httpError';
-import {
-  pickInt,
-  pickQuery,
-  requireMethod,
-  withErrorHandler,
-} from '../../../lib/handler';
 
 export default withErrorHandler(async (req: VercelRequest, res: VercelResponse) => {
   requireMethod(req, ['GET']);

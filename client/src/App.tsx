@@ -2,9 +2,9 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import Layout from './components/Layout';
 import MusicKitProvider from './components/MusicKitProvider';
 import HomePage from './pages/HomePage';
-import SearchPage from './pages/SearchPage';
 import LibraryPage from './pages/LibraryPage';
 import OrganizerPage from './pages/OrganizerPage';
+import SearchPage from './pages/SearchPage';
 import SettingsPage from './pages/SettingsPage';
 
 export default function App() {

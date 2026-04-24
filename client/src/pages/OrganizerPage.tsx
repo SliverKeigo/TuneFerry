@@ -40,9 +40,8 @@ export default function OrganizerPage() {
       <header>
         <h1 style={{ margin: 0 }}>Organizer</h1>
         <p style={{ color: 'var(--color-text-muted)', marginTop: 6 }}>
-          The organizer builds on the data we already have via{' '}
-          <Link to="/library">Library</Link> and <Link to="/search">Search</Link>. These are the
-          operations we&apos;re targeting next.
+          The organizer builds on the data we already have via <Link to="/library">Library</Link>{' '}
+          and <Link to="/search">Search</Link>. These are the operations we&apos;re targeting next.
         </p>
       </header>
 
@@ -65,11 +64,15 @@ export default function OrganizerPage() {
               gap: 8,
             }}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+            <div
+              style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}
+            >
               <h3 style={{ margin: 0, fontSize: 16 }}>{a.title}</h3>
               <span className="tag">{a.status === 'planned' ? 'Planned' : 'Soon'}</span>
             </div>
-            <p style={{ margin: 0, color: 'var(--color-text-muted)', fontSize: 14, lineHeight: 1.5 }}>
+            <p
+              style={{ margin: 0, color: 'var(--color-text-muted)', fontSize: 14, lineHeight: 1.5 }}
+            >
               {a.body}
             </p>
           </article>

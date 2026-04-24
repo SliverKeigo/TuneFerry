@@ -4,7 +4,10 @@ import { useCallback, useEffect, useState } from 'react';
  * React state synced with `localStorage`. Accepts a string key; stored as JSON
  * so non-string values survive round-tripping.
  */
-export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T | ((prev: T) => T)) => void, () => void] {
+export function useLocalStorage<T>(
+  key: string,
+  initialValue: T,
+): [T, (value: T | ((prev: T) => T)) => void, () => void] {
   const read = useCallback((): T => {
     if (typeof window === 'undefined') return initialValue;
     try {

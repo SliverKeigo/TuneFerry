@@ -1,7 +1,7 @@
-import { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { fetchDeveloperToken } from '../api/appleMusicApi';
 import { useLocalStorage } from '../hooks/useLocalStorage';
-import { MusicKitContext, MusicKitContextValue } from '../hooks/useMusicKit';
+import { MusicKitContext, type MusicKitContextValue } from '../hooks/useMusicKit';
 
 // ---------- MusicKit ambient types (minimum subset) ----------
 // MusicKit v3 is loaded via <script> in index.html and lives on `window.MusicKit`.
@@ -68,6 +68,8 @@ export default function MusicKitProvider({ children }: { children: ReactNode }) 
   const instanceRef = useRef<MusicKitInstance | null>(null);
 
   // --- Initialise MusicKit once ---
+  // Mount-only: storefront changes trigger a full reload via setStorefront().
+  // biome-ignore lint/correctness/useExhaustiveDependencies: intentional mount-only init
   useEffect(() => {
     let cancelled = false;
 
@@ -103,7 +105,6 @@ export default function MusicKitProvider({ children }: { children: ReactNode }) 
       } catch (err) {
         if (cancelled) return;
         const msg = err instanceof Error ? err.message : String(err);
-        // eslint-disable-next-line no-console
         console.error('[MusicKit] init failed', err);
         setError(msg);
         setIsReady(false);
@@ -113,12 +114,12 @@ export default function MusicKitProvider({ children }: { children: ReactNode }) 
     return () => {
       cancelled = true;
     };
-    // Intentionally only on mount — reconfiguring for storefront changes is
-    // handled by `setStorefront` below.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // --- Listen for auth changes emitted by MusicKit itself ---
+  // `isReady` gates when `instanceRef.current` is set; without it the effect
+  // runs only on mount (before the instance exists) and never re-subscribes.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: isReady is the required trigger
   useEffect(() => {
     const instance = instanceRef.current;
     if (!instance) return;
@@ -184,7 +185,16 @@ export default function MusicKitProvider({ children }: { children: ReactNode }) 
       unauthorize,
       setStorefront,
     }),
-    [isReady, isAuthorized, musicUserToken, storefront, error, authorize, unauthorize, setStorefront],
+    [
+      isReady,
+      isAuthorized,
+      musicUserToken,
+      storefront,
+      error,
+      authorize,
+      unauthorize,
+      setStorefront,
+    ],
   );
 
   return <MusicKitContext.Provider value={value}>{children}</MusicKitContext.Provider>;

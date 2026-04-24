@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import type {
   AppleMusicAlbumAttributes,
   AppleMusicArtistAttributes,
@@ -79,9 +79,7 @@ export default function SearchResultCard({ resource, actions }: Props) {
 
   return (
     <article className={styles.card}>
-      <div className={styles.art}>
-        {imgSrc ? <img src={imgSrc} alt="" loading="lazy" /> : null}
-      </div>
+      <div className={styles.art}>{imgSrc ? <img src={imgSrc} alt="" loading="lazy" /> : null}</div>
       <div className={styles.body}>
         <div className={styles.title} title={title}>
           {title}
