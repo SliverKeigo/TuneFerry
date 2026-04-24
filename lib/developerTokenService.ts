@@ -28,7 +28,7 @@ function loadPrivateKey(): string {
   }
   throw new HttpError(
     500,
-    'No Apple private key configured. Set APPLE_PRIVATE_KEY_PATH or APPLE_PRIVATE_KEY in the environment, or provide APPLE_MUSIC_DEVELOPER_TOKEN for MVP mode.',
+    'No Apple private key configured. Set APPLE_PRIVATE_KEY (inline PEM, takes precedence) or APPLE_PRIVATE_KEY_PATH in the environment, or provide APPLE_MUSIC_DEVELOPER_TOKEN for MVP mode.',
   );
 }
 

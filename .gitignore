@@ -41,3 +41,6 @@ pnpm-debug.log*
 # Test coverage
 coverage/
 .nyc_output/
+
+# doc plan
+docs

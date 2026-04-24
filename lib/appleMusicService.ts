@@ -16,6 +16,17 @@ interface RequestOptions {
   body?: unknown;
 }
 
+async function throwOnHttpError(response: Response, contextMessage: string): Promise<void> {
+  if (response.ok) return;
+  let payload: unknown = null;
+  try {
+    payload = await response.json();
+  } catch {
+    payload = await response.text().catch(() => null);
+  }
+  throw new HttpError(response.status, `${contextMessage} (${response.status})`, payload);
+}
+
 async function appleFetch<T>(path: string, opts: RequestOptions = {}): Promise<T> {
   const developerToken = getDeveloperToken();
   const url = new URL(`${APPLE_MUSIC_API_BASE}${path}`);
@@ -44,19 +55,7 @@ async function appleFetch<T>(path: string, opts: RequestOptions = {}): Promise<T
     body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
   });
 
-  if (!response.ok) {
-    let payload: unknown = null;
-    try {
-      payload = await response.json();
-    } catch {
-      payload = await response.text().catch(() => null);
-    }
-    throw new HttpError(
-      response.status,
-      `Apple Music API error (${response.status})`,
-      payload,
-    );
-  }
+  await throwOnHttpError(response, 'Apple Music API error');
 
   const text = await response.text();
   if (!text) return undefined as T;
@@ -114,10 +113,10 @@ export async function addToLibrary(params: {
   musicUserToken: string | undefined;
 }): Promise<void> {
   const userToken = requireMusicUserToken(params.musicUserToken);
-  if (!params.ids.length) {
-    throw new HttpError(400, 'ids must be a non-empty array');
-  }
 
+  // Apple wants `?ids[<type>]=a,b` with brackets percent-encoded. URLSearchParams
+  // would double-encode the bracket key, so we build the querystring by hand.
+  // Each id is encoded independently so commas/special chars inside an id stay intact.
   const query = `ids%5B${encodeURIComponent(params.type)}%5D=${params.ids
     .map((id) => encodeURIComponent(id))
     .join(',')}`;
@@ -132,19 +131,7 @@ export async function addToLibrary(params: {
     },
   });
 
-  if (!response.ok) {
-    let payload: unknown = null;
-    try {
-      payload = await response.json();
-    } catch {
-      payload = await response.text().catch(() => null);
-    }
-    throw new HttpError(
-      response.status,
-      `Failed to add to library (${response.status})`,
-      payload,
-    );
-  }
+  await throwOnHttpError(response, 'Failed to add to library');
 }
 
 export async function getLibraryPlaylists(params: {

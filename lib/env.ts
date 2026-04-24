@@ -1,13 +1,18 @@
-import fs from 'node:fs';
-import path from 'node:path';
 import dotenv from 'dotenv';
 
-// Load the repo-root `.env` for local development. On Vercel the values come
-// straight from the runtime env, so `.env` won't exist inside the deployed
-// bundle and we silently skip.
-const rootEnvPath = path.resolve(__dirname, '../.env');
-if (fs.existsSync(rootEnvPath)) {
-  dotenv.config({ path: rootEnvPath, override: false });
+const isVercel = Boolean(process.env.VERCEL || process.env.VERCEL_ENV);
+
+// Local dev only. Vercel injects env vars directly, so skipping dotenv there
+// avoids a pointless fs lookup from inside the ncc bundle (where `__dirname`
+// points into a temp build dir and a relative `.env` would never resolve).
+//
+// Letting dotenv default to `<cwd>/.env` works for every local entrypoint we
+// care about because they all run from the repo root:
+//   - `vite`           → `npm run dev:client`
+//   - `vercel dev`     → `npm run dev:api`
+//   - `tsx` / scripts  → invoked from the repo root
+if (!isVercel) {
+  dotenv.config();
 }
 
 function requireString(value: string | undefined, fallback?: string): string | undefined {
@@ -57,5 +62,5 @@ export const env: AppEnv = {
 
   tokenTtlSeconds: parseNumber(process.env.APPLE_TOKEN_TTL_SECONDS, 15_777_000),
 
-  isVercel: Boolean(process.env.VERCEL || process.env.VERCEL_ENV),
+  isVercel,
 };

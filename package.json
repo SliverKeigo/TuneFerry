@@ -2,21 +2,19 @@
   "name": "apple-music-library-organizer",
   "version": "0.1.0",
   "private": true,
-  "description": "Web app to connect Apple Music, search the catalog & your library, and organize it.",
+  "description": "Web app to connect Apple Music, search the catalog & your library, and organize it. Deployed as a single Vercel project.",
   "workspaces": [
-    "client",
-    "server"
+    "client"
   ],
   "scripts": {
-    "dev": "npm-run-all --parallel dev:server dev:client",
-    "dev:server": "npm --workspace server run dev",
+    "dev": "npm-run-all --parallel dev:api dev:client",
+    "dev:api": "vercel dev --listen 3000 --yes",
     "dev:client": "npm --workspace client run dev",
     "build": "npm --workspace client run build",
-    "typecheck": "npm-run-all --parallel typecheck:api typecheck:server typecheck:client",
+    "typecheck": "npm-run-all --parallel typecheck:api typecheck:client",
     "typecheck:api": "tsc -p tsconfig.json --noEmit",
-    "typecheck:server": "npm --workspace server run typecheck",
     "typecheck:client": "npm --workspace client run typecheck",
-    "clean": "rimraf client/dist server/dist"
+    "clean": "rimraf client/dist"
   },
   "dependencies": {
     "@vercel/node": "^3.2.29",
@@ -28,6 +26,7 @@
     "@types/node": "^20.11.30",
     "npm-run-all": "^4.1.5",
     "rimraf": "^5.0.5",
-    "typescript": "^5.4.3"
+    "typescript": "^5.4.3",
+    "vercel": "^39.1.3"
   }
 }
