@@ -65,13 +65,20 @@ export default function MusicKitProvider({ children }: { children: ReactNode }) 
   const [musicUserToken, setMusicUserToken] = useState<string>(cachedUserToken);
   const [error, setError] = useState<string | null>(null);
 
-  const instanceRef = useRef<MusicKitInstance | null>(null);
+  // Instance lives in state, not a ref, so the subscription effect below can
+  // actually depend on "instance became available" as a reactive value.
+  const [instance, setInstance] = useState<MusicKitInstance | null>(null);
+
+  // Mount-time snapshot of values we want to seed MusicKit with exactly once.
+  // Later changes must NOT re-run init — storefront swaps force a page reload
+  // via setStorefront(); disconnect clears cachedUserToken but must not bounce
+  // the user through a new MusicKit.configure().
+  const initialRef = useRef({ userToken: cachedUserToken, storefront });
 
   // --- Initialise MusicKit once ---
-  // Mount-only: storefront changes trigger a full reload via setStorefront().
-  // biome-ignore lint/correctness/useExhaustiveDependencies: intentional mount-only init
   useEffect(() => {
     let cancelled = false;
+    const { userToken: initialUserToken, storefront: initialStorefront } = initialRef.current;
 
     (async () => {
       try {
@@ -84,20 +91,20 @@ export default function MusicKitProvider({ children }: { children: ReactNode }) 
         const result = MusicKit.configure({
           developerToken,
           app: { name: APP_NAME, build: APP_BUILD },
-          storefrontId: storefront,
+          storefrontId: initialStorefront,
         });
-        const instance = (await result) as MusicKitInstance;
+        const freshInstance = (await result) as MusicKitInstance;
         if (cancelled) return;
 
-        instanceRef.current = instance;
+        setInstance(freshInstance);
 
-        // Reflect the current MusicKit state. When the user has authorised in
-        // a previous session MusicKit will already report `isAuthorized: true`.
-        const kitAuthorized = instance.isAuthorized;
-        const kitToken = instance.musicUserToken || '';
-        setIsAuthorized(kitAuthorized || Boolean(cachedUserToken));
-        setMusicUserToken(kitToken || cachedUserToken);
-        if (kitToken && kitToken !== cachedUserToken) {
+        // If MusicKit already knows the user from a previous session it will
+        // report authorised here; reconcile with anything we had cached.
+        const kitAuthorized = freshInstance.isAuthorized;
+        const kitToken = freshInstance.musicUserToken || '';
+        setIsAuthorized(kitAuthorized || Boolean(initialUserToken));
+        setMusicUserToken(kitToken || initialUserToken);
+        if (kitToken && kitToken !== initialUserToken) {
           setCachedUserToken(kitToken);
         }
         setIsReady(true);
@@ -114,28 +121,21 @@ export default function MusicKitProvider({ children }: { children: ReactNode }) 
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [setCachedUserToken]);
 
   // --- Listen for auth changes emitted by MusicKit itself ---
-  // `isReady` gates when `instanceRef.current` is set; without it the effect
-  // runs only on mount (before the instance exists) and never re-subscribes.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: isReady is the required trigger
   useEffect(() => {
-    const instance = instanceRef.current;
     if (!instance) return;
-    function sync() {
-      const inst = instanceRef.current;
-      if (!inst) return;
-      setIsAuthorized(inst.isAuthorized);
-      setMusicUserToken(inst.musicUserToken || '');
-      if (inst.musicUserToken) setCachedUserToken(inst.musicUserToken);
-    }
+    const sync = () => {
+      setIsAuthorized(instance.isAuthorized);
+      setMusicUserToken(instance.musicUserToken || '');
+      if (instance.musicUserToken) setCachedUserToken(instance.musicUserToken);
+    };
     instance.addEventListener('authorizationStatusDidChange', sync);
     return () => instance.removeEventListener('authorizationStatusDidChange', sync);
-  }, [isReady, setCachedUserToken]);
+  }, [instance, setCachedUserToken]);
 
   const authorize = useCallback(async () => {
-    const instance = instanceRef.current;
     if (!instance) {
       setError('MusicKit is not ready yet.');
       return;
@@ -150,10 +150,9 @@ export default function MusicKitProvider({ children }: { children: ReactNode }) 
       const msg = err instanceof Error ? err.message : String(err);
       setError(msg);
     }
-  }, [setCachedUserToken]);
+  }, [instance, setCachedUserToken]);
 
   const unauthorize = useCallback(async () => {
-    const instance = instanceRef.current;
     try {
       if (instance) await instance.unauthorize();
     } catch {
@@ -162,7 +161,7 @@ export default function MusicKitProvider({ children }: { children: ReactNode }) 
     clearCachedUserToken();
     setMusicUserToken('');
     setIsAuthorized(false);
-  }, [clearCachedUserToken]);
+  }, [instance, clearCachedUserToken]);
 
   const setStorefront = useCallback(
     (next: string) => {
