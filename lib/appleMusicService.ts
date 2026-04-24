@@ -9,6 +9,15 @@ import type {
 
 const APPLE_MUSIC_API_BASE = 'https://api.music.apple.com/v1';
 
+// The WebPlay-scraped Developer Token is signed with a `root_https_origin`
+// claim of ["apple.com"], which Apple's servers enforce by rejecting any
+// request whose Origin header doesn't match. Without this header the API
+// returns 401 even though Authorization is valid. A browser User-Agent is
+// not strictly required today but defends against future tightening.
+const BROWSER_ORIGIN = 'https://music.apple.com';
+const BROWSER_USER_AGENT =
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
+
 interface RequestOptions {
   method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
   query?: Record<string, string | number | undefined>;
@@ -41,6 +50,8 @@ async function appleFetch<T>(path: string, opts: RequestOptions = {}): Promise<T
   const headers: Record<string, string> = {
     Authorization: `Bearer ${developerToken}`,
     Accept: 'application/json',
+    Origin: BROWSER_ORIGIN,
+    'User-Agent': BROWSER_USER_AGENT,
   };
   if (opts.musicUserToken) {
     headers['Music-User-Token'] = opts.musicUserToken;
@@ -129,6 +140,8 @@ export async function addToLibrary(params: {
       Authorization: `Bearer ${developerToken}`,
       'Music-User-Token': userToken,
       Accept: 'application/json',
+      Origin: BROWSER_ORIGIN,
+      'User-Agent': BROWSER_USER_AGENT,
     },
   });
 
