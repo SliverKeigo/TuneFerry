@@ -9,12 +9,14 @@
     "ignore": [
       "**/node_modules",
       "**/dist",
+      "**/.next",
       "**/.vercel",
       "**/.vite",
-      "client/index.html",
       "package-lock.json",
       "docs/**",
-      "ui-design/**"
+      "ui-design/**",
+      "client/**",
+      "next-env.d.ts"
     ]
   },
   "organizeImports": {

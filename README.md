@@ -2,175 +2,125 @@
 
 **English** · [简体中文](./README.zh-CN.md)
 
-A web app that connects to your Apple Music account, searches the Apple Music catalog and your personal library, and adds tracks/albums/playlists to your library with one click. Deployed as a single Vercel project — static frontend + per-route serverless functions on the same origin.
+A web app that connects to your Apple Music account, searches the Apple Music catalog and your personal library, and adds tracks/albums/playlists to your library with one click. Built as a single **Next.js 14** app, deployable to Vercel.
 
 ## Tech Stack
 
-- **Frontend:** React 18 + TypeScript, built with Vite. Styling is inline styles driven by a CSS-variable token system (OKLCH), with a small `primitives.tsx` component library — no UI framework, no CSS Modules.
-- **Design system:** OKLCH-based light/dark themes, glass/flat surface, sidebar/topnav/mobile navigation modes, runtime-configurable accent hue. See `client/src/styles/global.css` + `client/src/hooks/useTweaks.ts` + `client/src/components/TweaksPanel.tsx`.
-- **Backend:** Per-route serverless functions under `/api/**`, running on Vercel's `@vercel/node` runtime. Apple Music API proxy + Developer Token minting.
-- **Local dev:** `vercel dev` runs the exact same functions on your machine, proxied by Vite for HMR.
-- **Shared:** `lib/` holds every service, type, validator, and util consumed by the functions.
-- **Quality gate:** Biome (lint + format + import sort), TypeScript strict, and Vitest (on `lib/` + `api/`). Biome + typecheck are enforced on every commit by a husky pre-commit hook; tests run in `npm run validate` (CI). See [Code Quality](#code-quality).
+- **Framework:** Next.js 14 (App Router) + React 18 + TypeScript, single-process dev via `next dev`.
+- **Styling:** inline styles driven by an OKLCH CSS-variable token system, plus a small `primitives.tsx` component library. No UI framework, no CSS Modules.
+- **Design system:** dark/light themes, glass/flat surface, sidebar/topnav/mobile navigation modes, runtime-configurable accent hue — all via `useTweaks()`.
+- **Backend:** Next.js Route Handlers under `src/app/api/**/route.ts`. Shared services live in `src/lib/` and are imported via the `@/` alias.
+- **Token source:** WebPlay-scraped Developer Token (see [Configuration](#configuration)). Pair with the `amp-api.music.apple.com` endpoint.
+- **Quality gate:** Biome (lint + format + import sort), TypeScript strict, Vitest on `src/lib/**` + `src/app/api/**`, husky pre-commit hook.
 
 ## Project Layout
 
 ```
 AM-API/
-├── api/                          # Vercel serverless functions (the backend)
-│   ├── health.ts                 # GET  /api/health
-│   └── apple-music/
-│       ├── developer-token.ts    # GET  /api/apple-music/developer-token
-│       ├── catalog/
-│       │   └── search.ts         # GET  /api/apple-music/catalog/search
-│       └── me/library/
-│           ├── index.ts          # POST /api/apple-music/me/library
-│           ├── search.ts         # GET  /api/apple-music/me/library/search
-│           └── playlists.ts      # GET  /api/apple-music/me/library/playlists
-├── lib/                          # Shared code imported by every function
-│   ├── appleMusicService.ts      # All Apple Music REST calls
-│   ├── developerTokenService.ts  # JWT (ES256) signing + in-memory cache
-│   ├── env.ts                    # Typed env, dotenv for local dev
-│   ├── handler.ts                # withErrorHandler, pickQuery, pickHeader, ...
-│   ├── httpError.ts              # HttpError with status + details
-│   ├── validators.ts             # Request body validation (shared)
-│   ├── validators.test.ts        # Vitest suite
-│   └── types/appleMusic.ts       # Apple Music response shapes
-├── client/                       # Vite + React + TS frontend
-│   └── src/
-│       ├── api/appleMusicApi.ts
-│       ├── components/           # primitives.tsx, icons.tsx, Layout,
-│       │                         # Sidebar, TopNav, MobileNav,
-│       │                         # MusicKitProvider, TweaksPanel
-│       ├── hooks/                # useLocalStorage, useMusicKit, useTweaks
-│       ├── pages/                # Home, Dashboard, Search, Library,
-│       │                         # Organizer, Settings
-│       ├── styles/global.css     # OKLCH tokens + base classes
-│       └── types/appleMusic.ts
-├── vercel.json                   # buildCommand, outputDirectory, SPA rewrites
-├── .vercelignore                 # strips .vercel/ and .p8 from deploy bundles
-└── tsconfig.json                 # typechecks lib/ + api/
+├── src/
+│   ├── app/                  # Next.js App Router
+│   │   ├── layout.tsx        # Root layout (fonts + MusicKit <Script> + Providers)
+│   │   ├── page.tsx          # / (Home)
+│   │   ├── globals.css       # OKLCH tokens + base classes
+│   │   ├── dashboard/page.tsx
+│   │   ├── search/page.tsx
+│   │   ├── library/page.tsx
+│   │   ├── organizer/page.tsx
+│   │   ├── settings/page.tsx
+│   │   └── api/
+│   │       ├── health/route.ts
+│   │       └── apple-music/
+│   │           ├── developer-token/route.ts
+│   │           ├── catalog/search/route.ts
+│   │           └── me/library/
+│   │               ├── route.ts           # POST add-to-library
+│   │               ├── search/route.ts
+│   │               └── playlists/route.ts
+│   ├── components/           # primitives, icons, AppShell, Sidebar, TopNav, MobileNav, MusicKitProvider, TweaksPanel, Providers
+│   ├── hooks/                # useLocalStorage, useMusicKit, useTweaks
+│   ├── api/appleMusicApi.ts  # client-side fetch wrappers
+│   ├── types/appleMusic.ts   # frontend types
+│   └── lib/                  # shared: appleMusicService, developerTokenService, validators, nextHandler, httpError, env, types
+├── next.config.js
+├── tsconfig.json
+├── biome.json
+└── vitest.config.ts
 ```
 
 ## Quick Start
-
-The local dev loop uses two processes in parallel: `vercel dev` (serves `/api/**`) and Vite (serves the client with HMR, proxying `/api` to `vercel dev`).
 
 ```bash
 # 1. Install
 npm install
 
-# 2. Link the repo to a Vercel project — REQUIRED before `npm run dev`
-#    Otherwise `vercel dev` races an interactive link prompt against Vite's boot.
-npx vercel login          # OAuth via your Vercel account
-npx vercel link           # creates .vercel/ — gitignored
-
-# 3. Configure environment
+# 2. Configure environment — paste your scraped Developer Token
 cp .env.example .env
-#   MVP path:       paste a Developer Token into APPLE_MUSIC_DEVELOPER_TOKEN
-#   Signing path:   set APPLE_TEAM_ID + APPLE_KEY_ID + APPLE_PRIVATE_KEY (inline PEM)
+#   Fill APPLE_MUSIC_DEVELOPER_TOKEN (see Configuration below)
 
-# 4. Run both dev servers
+# 3. Run dev (single process, port 3000)
 npm run dev
-#   vercel dev  →  http://localhost:3000   (serves /api/**)
-#   vite        →  http://localhost:5173   (open this — proxies /api to :3000)
+# → http://localhost:3000
 ```
 
-## Environment Variables
+> **If you have a local HTTP proxy** (Clash, surge, Shadowsocks, etc.), `curl localhost:3000/...` may 503 because the proxy intercepts. Use `curl --noproxy '*' http://localhost:3000/...` or `unset http_proxy https_proxy` in your shell.
 
-See [`.env.example`](./.env.example). Key fields:
+## Configuration
+
+Copy [`.env.example`](./.env.example) to `.env` and fill in:
 
 | Var | Purpose |
 | --- | --- |
-| `APPLE_MUSIC_DEVELOPER_TOKEN` | Optional pre-generated token. Skips JWT signing entirely. |
-| `APPLE_TEAM_ID` | Apple Developer Team ID (10 chars). |
-| `APPLE_KEY_ID` | Key ID of your Media Services (.p8) key. |
-| `APPLE_PRIVATE_KEY` | Inline PEM. **Takes precedence**. Required on Vercel. |
-| `APPLE_PRIVATE_KEY_PATH` | Local-only fallback: absolute path to the `.p8` file. |
-| `APPLE_TOKEN_TTL_SECONDS` | JWT lifetime; default ~6 months (Apple's max). |
-| `VITE_API_BASE_URL` | Vite's `/api` proxy target during dev. Default `http://localhost:3000`. |
-| `VITE_DEFAULT_STOREFRONT` | Initial storefront the client boots with (`us`, `hk`, `tw`, `jp`, ...). |
+| `APPLE_MUSIC_DEVELOPER_TOKEN` | **Required.** A Developer Token string (see below). |
+| `NEXT_PUBLIC_DEFAULT_STOREFRONT` | Optional. Initial storefront (`us`, `jp`, `hk`, …). Defaults to `us`. |
+| `APPLE_TEAM_ID`, `APPLE_KEY_ID`, `APPLE_PRIVATE_KEY`, `APPLE_PRIVATE_KEY_PATH` | Optional. Only used if you want the server to mint its own JWT (requires an Apple Developer Program subscription). |
 
-## Deploying to Vercel
+### Getting a Developer Token
 
-1. **Link & push:**
-   ```bash
-   npx vercel link       # once
-   git push              # your remote if you wired one up
-   npx vercel --prod     # one-shot production deploy from CLI
-   ```
-   Or import the repo from the Vercel dashboard; framework preset is "Other" (the root `vercel.json` controls the build).
-2. **Set env vars** in *Project Settings → Environment Variables* (or `vercel env add`):
-   - `APPLE_MUSIC_DEVELOPER_TOKEN` (MVP), OR
-   - `APPLE_TEAM_ID`, `APPLE_KEY_ID`, and `APPLE_PRIVATE_KEY` (the full PEM content, with line breaks escaped or preserved — both work).
-   - **Never** use `APPLE_PRIVATE_KEY_PATH` on Vercel — there is no persistent file.
-3. **Build model:**
-   - Vercel runs `npm install` and `npm run build` → `client/dist` is served statically.
-   - Every `.ts` under `/api/**` is compiled independently by `@vercel/node` into its own function. Shared imports from `lib/` are traced and bundled automatically.
-4. **SPA routing:** `vercel.json` rewrites any non-`/api/` path to `/index.html` so React Router works on hard refreshes. Static files (assets, favicon) take precedence because Vercel's filesystem handler runs before rewrites.
+**Two paths:**
 
-### Developer Token on Vercel
+**(A) Official** — requires [Apple Developer Program](https://developer.apple.com/programs/) ($99/yr). Create a Media Services key with MusicKit enabled, download the `.p8`, then either:
+- Paste a pre-signed token into `APPLE_MUSIC_DEVELOPER_TOKEN`, OR
+- Set `APPLE_TEAM_ID` + `APPLE_KEY_ID` + `APPLE_PRIVATE_KEY` (inline PEM) and the server signs its own.
 
-- MVP flow: paste a pre-minted token into `APPLE_MUSIC_DEVELOPER_TOKEN`; the function returns it verbatim with `Cache-Control: private, max-age=300`.
-- Signing flow: paste the PEM into `APPLE_PRIVATE_KEY`. `lib/developerTokenService.ts` signs a JWT with ES256 on first request and caches it in warm function memory.
+**(B) WebPlay scraping** — no subscription needed, but **unofficial and subject to change without notice**. Fetch `https://beta.music.apple.com`, grab the `index-legacy-*.js` filename from the HTML, fetch that JS, extract the `eyJh...` JWT via regex. The scraped token:
+- Has a `root_https_origin: ["apple.com"]` claim, so all backend fetches include `Origin: https://music.apple.com` + a desktop User-Agent (enforced in `src/lib/appleMusicService.ts`; locked by tests).
+- Uses `https://amp-api.music.apple.com/v1` as the API base (Apple's Web player endpoint, paired with WebPlay tokens).
+- Lives ~72 days. Re-scrape when it expires and replace `APPLE_MUSIC_DEVELOPER_TOKEN` in `.env`.
 
-## Backend Endpoints
+## Deployment
 
-| Method | Path | Notes |
-| --- | --- | --- |
-| GET | `/api/health` | Smoke test. |
-| GET | `/api/apple-music/developer-token` | Returns `{ developerToken }`. Cached 5 min on the client. |
-| GET | `/api/apple-music/catalog/search?term=&storefront=&types=&limit=` | Catalog proxy. |
-| GET | `/api/apple-music/me/library/search?term=&types=&limit=` | Needs `x-music-user-token`. |
-| POST | `/api/apple-music/me/library` | Body `{ "type": "songs"\|"albums"\|"playlists"\|"music-videos", "ids": string[] }`. Needs `x-music-user-token`. |
-| GET | `/api/apple-music/me/library/playlists?limit=&offset=` | Needs `x-music-user-token`. |
+This is a vanilla Next.js app. Deploy to Vercel:
 
-All errors follow:
-
-```json
-{ "error": { "message": "string", "status": 401, "details": "optional" } }
+```bash
+npx vercel link     # once
+npx vercel --prod
 ```
 
-## How to get an Apple Music Developer Token
-
-1. Enrol in the [Apple Developer Program](https://developer.apple.com/programs/).
-2. In the [Certificates, Identifiers & Profiles](https://developer.apple.com/account/resources/) console, create a **Media Services** key (enable *MusicKit*). Download the `.p8` file — you can only download it once.
-3. Note the **Key ID** (shown in the portal) and your **Team ID** (top right).
-4. Paste into `.env` locally and into Vercel's env vars for production. Keep the `.p8` out of the repo.
-
-## Connecting a user
-
-The frontend loads [MusicKit on the Web](https://developer.apple.com/documentation/musickitjs) v3 from Apple's CDN. `Connect Apple Music`:
-
-1. Fetches a Developer Token from `/api/apple-music/developer-token`.
-2. Calls `MusicKit.configure({ developerToken, app })`.
-3. Opens Apple's consent popup.
-4. Returns a **Music User Token**, stored in `localStorage` and forwarded to backend calls via the `x-music-user-token` header.
-
-The backend never persists the Music User Token — it only forwards it to `api.music.apple.com`.
+Vercel auto-detects Next.js; `npm run build` produces the production bundle. Set environment variables in the Vercel project dashboard (or `vercel env add`).
 
 ## Scripts
 
 ```bash
-npm run dev            # vercel dev + vite in parallel
-npm run build          # build the client (api is built by Vercel on deploy)
-npm run typecheck      # api + client in parallel
-npm run check          # Biome lint + format + import sort (whole repo)
-npm run check:fix      # same, with safe autofixes applied
-npm run test           # Vitest, single run (lib + api)
-npm run test:watch     # Vitest in watch mode
-npm run test:coverage  # Vitest with v8 coverage
-npm run validate       # check + typecheck + test in parallel (what CI should run)
-npm run clean          # rm client/dist + coverage
+npm run dev            # next dev (port 3000)
+npm run build          # next build
+npm run start          # next start (production server after build)
+npm run typecheck      # tsc --noEmit
+npm run check          # Biome lint + format + import sort
+npm run check:fix      # same, with autofixes applied
+npm run test           # Vitest, single run
+npm run test:watch     # Vitest watch mode
+npm run test:coverage  # Vitest + v8 coverage
+npm run validate       # check + typecheck + test in parallel (CI)
+npm run clean          # rm .next + coverage
 ```
 
 ## Code Quality
 
 - **Biome** handles lint, formatter, and import sort in a single binary. Config: [`biome.json`](./biome.json).
-- **TypeScript strict mode** across `lib/`, `api/`, and `client/`.
-- **Vitest 2** covers `lib/**` and `api/**` (Node environment). Tests live next to sources (`foo.ts` → `foo.test.ts`). Config: [`vitest.config.ts`](./vitest.config.ts).
-- **Pre-commit gate:** `.husky/pre-commit` runs `npm run check` (Biome, whole repo) and `npm run typecheck` before every commit. `npm run validate` additionally runs `npm test`; CI should use `validate`.
-- If you need to bypass the hook for an emergency, `git commit --no-verify` still works — use sparingly.
+- **TypeScript strict mode** across the entire `src/` tree. Path alias `@/*` → `./src/*`.
+- **Vitest 2** covers `src/lib/**` and `src/app/api/**` (Node environment).
+- **Pre-commit gate:** `.husky/pre-commit` runs `npm run check` + `npm run typecheck` before every commit. Tests run in `validate` (CI).
+- Bypass: `git commit --no-verify` — use sparingly.
 
 ## Roadmap
 
@@ -182,22 +132,23 @@ npm run clean          # rm client/dist + coverage
 - [x] Phase 6 — User library search
 - [x] Phase 7 — Add-to-library
 - [x] Phase 8 — Library playlists
-- [x] Phase 9 — Error handling, empty/loading states, README polish
-- [x] Phase 10 — Vercel deployment target (per-route serverless functions, shared `/lib`)
-- [x] Phase 11 — Dropped Express; single backend runtime (`vercel dev` locally, functions in prod)
-- [x] Phase 12 — Biome + husky pre-commit gate; MusicKitProvider ref → state refactor (no more hook-deps suppressions); StrictMode-safe `MusicKit.configure()`
-- [x] Phase 13 — Vitest 2 over `lib/**` and `api/**` with a seed suite for `parseAddToLibraryBody`; `npm run validate` now runs check + typecheck + test in parallel
-- [x] Phase 14 — UI rebuilt to match the design prototype (`ui-design/`): OKLCH token system, `primitives.tsx` component library (Button, StatusDot, Pill, AddButton with idle/adding/added/failed states, Toast, Segmented, PageHeader, StatCard, Artwork), 35 stroke-based icons, responsive Layout (sidebar/topnav/mobile), new Dashboard page, `TweaksPanel` for runtime theme/surface/nav/accent control. CSS Modules dropped entirely in favour of inline styles + CSS variables
+- [x] Phase 9 — Error handling, empty/loading states
+- [x] Phase 10 — Vercel deployment target (per-route serverless functions)
+- [x] Phase 11 — Dropped Express; single backend runtime
+- [x] Phase 12 — Biome + husky pre-commit gate; MusicKitProvider ref → state refactor
+- [x] Phase 13 — Vitest 2 with seed suite for `parseAddToLibraryBody`
+- [x] Phase 14 — UI rebuilt against the design prototype (OKLCH tokens, primitives, Dashboard page, responsive shell)
+- [x] Phase 15 — Accept WebPlay-scraped Developer Tokens via `amp-api.music.apple.com` with Origin/UA headers; 3 lock-in tests
+- [x] Phase 16 — Rebuilt on Next.js 14 App Router (single-process `next dev`, file-system routing, `src/` layout, `@/` alias)
 - [ ] Next — Organizer actions (group by artist/album, missing tracks, bulk add to playlist)
 - [ ] Next — Server-side session for Music User Token (replace `localStorage`)
 - [ ] Next — Paginated catalog/library results
-- [ ] Next — Client-side React tests (requires `jsdom` + `@testing-library/react` under `client/`)
+- [ ] Next — Client-side React component tests (jsdom + @testing-library/react under `src/`)
 
 ## Known Limitations (MVP)
 
 - Music User Token lives in `localStorage`. Production should move it behind an HttpOnly session cookie or server-side store.
-- Vercel functions have no explicit CORS — they rely on browsers' same-origin policy since the client and `/api` share a domain. Cross-origin callers hitting `/api/apple-music/developer-token` will succeed, which is acceptable because the token is not itself a secret (it's built to be handed to the browser).
 - No rate-limit handling — upstream Apple errors pass through verbatim in the `details` field.
-- `createLibraryPlaylist` is present in `lib/appleMusicService.ts` but not yet exposed as a route.
-- Cold-start functions re-sign the Developer Token. Cheap (~1ms with `jsonwebtoken` ES256) but not zero.
-- `vercel dev` requires a Vercel account for first-time link. Purely-offline devs can work against a preview URL instead.
+- `createLibraryPlaylist` exists in `src/lib/appleMusicService.ts` but isn't exposed as a route yet.
+- The scraped WebPlay token approach is unofficial. Apple can break it any time by changing the front-end bundle name, the JWT claim shape, or adding origin enforcement we don't meet. Rebuild expectations accordingly.
+- Local HTTP proxies (Clash etc.) can intercept `curl localhost:3000` — use `--noproxy '*'` or unset `http_proxy`/`https_proxy`.

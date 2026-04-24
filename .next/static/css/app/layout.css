@@ -1,0 +1,280 @@
+/*!*****************************************************************************************************************************************************************************************************************************************************************!*\
+  !*** css ./node_modules/next/dist/build/webpack/loaders/css-loader/src/index.js??ruleSet[1].rules[14].oneOf[12].use[2]!./node_modules/next/dist/build/webpack/loaders/postcss-loader/src/index.js??ruleSet[1].rules[14].oneOf[12].use[3]!./src/app/globals.css ***!
+  \*****************************************************************************************************************************************************************************************************************************************************************/
+:root {
+  /* Overridden at runtime via tweaks (see useTweaks + <Layout>). */
+  --accent-h: 135;
+  --accent-c: 0.17;
+  --accent-l: 0.82;
+
+  --accent: oklch(var(--accent-l) var(--accent-c) var(--accent-h));
+  --accent-soft: oklch(var(--accent-l) var(--accent-c) var(--accent-h) / 0.12);
+  --accent-ring: oklch(var(--accent-l) var(--accent-c) var(--accent-h) / 0.28);
+  --accent-fg: oklch(0.18 0.04 var(--accent-h));
+
+  /* Dark theme (default). */
+  --bg: oklch(0.16 0.008 260);
+  --bg-2: oklch(0.19 0.009 260);
+  --panel: oklch(0.21 0.01 260 / 0.55);
+  --panel-solid: oklch(0.215 0.01 260);
+  --elev: oklch(0.255 0.012 260);
+  --hairline: oklch(1 0 0 / 0.07);
+  --hairline-strong: oklch(1 0 0 / 0.12);
+  --text: oklch(0.97 0.005 260);
+  --text-2: oklch(0.78 0.01 260);
+  --text-3: oklch(0.58 0.01 260);
+  --text-4: oklch(0.44 0.012 260);
+
+  --ok: oklch(0.82 0.17 145);
+  --warn: oklch(0.82 0.14 85);
+  --err: oklch(0.72 0.19 25);
+
+  --r-xs: 6px;
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 16px;
+  --r-xl: 22px;
+
+  --shadow-1: 0 1px 0 oklch(1 0 0 / 0.04) inset, 0 1px 2px oklch(0 0 0 / 0.35);
+  --shadow-2: 0 1px 0 oklch(1 0 0 / 0.05) inset, 0 8px 28px oklch(0 0 0 / 0.45);
+
+  --font-sans: "Inter Tight", -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI",
+    Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+
+  --step: 8px;
+  --dur: 180ms;
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+html[data-theme="light"] {
+  --bg: oklch(0.985 0.004 260);
+  --bg-2: oklch(0.965 0.005 260);
+  --panel: oklch(1 0 0 / 0.7);
+  --panel-solid: oklch(1 0 0);
+  --elev: oklch(0.99 0.003 260);
+  --hairline: oklch(0 0 0 / 0.08);
+  --hairline-strong: oklch(0 0 0 / 0.14);
+  --text: oklch(0.18 0.01 260);
+  --text-2: oklch(0.34 0.01 260);
+  --text-3: oklch(0.5 0.01 260);
+  --text-4: oklch(0.62 0.01 260);
+  --shadow-1: 0 1px 0 oklch(1 0 0 / 0.8) inset, 0 1px 2px oklch(0 0 0 / 0.06);
+  --shadow-2: 0 1px 0 oklch(1 0 0 / 0.9) inset, 0 10px 30px oklch(0 0 0 / 0.08);
+  --accent-fg: oklch(0.18 0.04 var(--accent-h));
+}
+
+html[data-surface="flat"] {
+  --panel: var(--bg-2);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-feature-settings: "ss01", "cv11";
+  background: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+button {
+  font-family: inherit;
+  font-size: inherit;
+  cursor: pointer;
+  border: none;
+  background: none;
+  color: inherit;
+  padding: 0;
+}
+
+input,
+select,
+textarea {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* Ambient gradient backdrop, rendered behind everything. */
+.app-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: radial-gradient(
+      1200px 600px at 8% -10%,
+      oklch(var(--accent-l) var(--accent-c) var(--accent-h) / 0.1),
+      transparent 60%
+    ), radial-gradient(900px 600px at 110% 10%, oklch(0.7 0.14 285 / 0.1), transparent 60%),
+    radial-gradient(800px 700px at 50% 120%, oklch(0.7 0.14 30 / 0.08), transparent 60%);
+}
+html[data-theme="light"] .app-bg {
+  background: radial-gradient(
+      1000px 500px at 8% -10%,
+      oklch(var(--accent-l) var(--accent-c) var(--accent-h) / 0.18),
+      transparent 60%
+    ), radial-gradient(800px 500px at 110% 10%, oklch(0.82 0.14 285 / 0.14), transparent 60%);
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--hairline-strong);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: oklch(1 0 0 / 0.2);
+  background-clip: padding-box;
+  border: 2px solid transparent;
+}
+
+::selection {
+  background: var(--accent-soft);
+  color: var(--text);
+}
+
+/* Reusable primitive classes — mirror the prototype. */
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-lg);
+  backdrop-filter: blur(24px) saturate(1.1);
+  -webkit-backdrop-filter: blur(24px) saturate(1.1);
+  box-shadow: var(--shadow-1);
+}
+html[data-surface="flat"] .panel {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
+}
+
+.hairline {
+  border-color: var(--hairline);
+}
+
+.kbd {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 5px;
+  background: var(--elev);
+  border: 1px solid var(--hairline);
+  color: var(--text-3);
+  line-height: 1;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent-ring);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Native input reset so inline-style components look coherent. */
+.input-native {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--hairline);
+  background: var(--elev);
+  color: var(--text);
+  outline: none;
+  transition: border-color var(--dur) var(--ease);
+}
+.input-native:focus {
+  border-color: var(--accent-ring);
+}
+
+@keyframes shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-4px);
+  }
+  75% {
+    transform: translateX(4px);
+  }
+}
+@keyframes pulse-ring {
+  0% {
+    box-shadow: 0 0 0 0 var(--accent-ring);
+  }
+  70% {
+    box-shadow: 0 0 0 10px transparent;
+  }
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+  }
+}
+@keyframes stagger-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes bar {
+  0% {
+    transform: scaleY(0.35);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+  100% {
+    transform: scaleY(0.35);
+  }
+}
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes tick {
+  from {
+    stroke-dashoffset: 20;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.page-enter {
+  animation: fade-up var(--dur) var(--ease);
+}
+

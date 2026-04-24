@@ -2,16 +2,12 @@
   "name": "apple-music-library-organizer",
   "version": "0.1.0",
   "private": true,
-  "description": "Web app to connect Apple Music, search the catalog & your library, and organize it. Deployed as a single Vercel project.",
-  "workspaces": ["client"],
+  "description": "Web app to connect Apple Music, search the catalog & your library, and organize it. Single Next.js app deployed on Vercel.",
   "scripts": {
-    "dev": "npm-run-all --parallel dev:api dev:client",
-    "dev:api": "vercel dev --listen 3000",
-    "dev:client": "npm --workspace client run dev",
-    "build": "npm --workspace client run build",
-    "typecheck": "npm-run-all --parallel typecheck:api typecheck:client",
-    "typecheck:api": "tsc -p tsconfig.json --noEmit",
-    "typecheck:client": "npm --workspace client run typecheck",
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
     "check": "biome check .",
     "check:fix": "biome check --write .",
     "format": "biome format --write .",
@@ -19,24 +15,27 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "validate": "npm-run-all --parallel check typecheck test",
-    "clean": "rimraf client/dist coverage",
+    "clean": "rimraf .next coverage",
     "prepare": "husky"
   },
   "dependencies": {
-    "@vercel/node": "^3.2.29",
     "dotenv": "^16.4.5",
-    "jsonwebtoken": "^9.0.2"
+    "jsonwebtoken": "^9.0.2",
+    "next": "^14.2.18",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
     "@types/jsonwebtoken": "^9.0.6",
     "@types/node": "^20.11.30",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
     "@vitest/coverage-v8": "^2.1.9",
     "husky": "^9.1.7",
     "npm-run-all": "^4.1.5",
     "rimraf": "^5.0.5",
     "typescript": "^5.4.3",
-    "vercel": "^39.1.3",
     "vitest": "^2.1.9"
   },
   "packageManager": "npm@10.8.2"

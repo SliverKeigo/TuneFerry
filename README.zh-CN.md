@@ -2,202 +2,153 @@
 
 [English](./README.md) · **简体中文**
 
-一个连接你 Apple Music 账号的 Web 应用：搜索 Apple Music 曲库、搜索你自己的资料库，一键把歌曲/专辑/播放列表加入资料库。以单个 Vercel 项目部署 —— 静态前端 + 每个路由独立的 Serverless 函数，运行在同一域名下。
+一个连接你 Apple Music 账号的 Web 应用：搜索 Apple Music 曲库、搜索你自己的资料库，一键把歌曲/专辑/播放列表加入资料库。基于 **Next.js 14** 单应用架构，可部署到 Vercel。
 
 ## 技术栈
 
-- **前端：** React 18 + TypeScript，基于 Vite 构建。样式走 inline styles + OKLCH 的 CSS 变量 token 体系，加一套小型 `primitives.tsx` 组件库 —— 不引入 UI 框架，也不用 CSS Modules。
-- **设计系统：** 基于 OKLCH 的 dark/light 主题、glass/flat 表面、sidebar/topnav/mobile 三种导航形态、运行时可调 accent hue。见 `client/src/styles/global.css` + `client/src/hooks/useTweaks.ts` + `client/src/components/TweaksPanel.tsx`。
-- **后端：** `/api/**` 下每个路由一个 Serverless 函数，运行在 Vercel 的 `@vercel/node` runtime。负责代理 Apple Music API、签发 Developer Token。
-- **本地开发：** `vercel dev` 在本机跑同一份函数，Vite 做前端 HMR 并把 `/api` 代理给它。
-- **共享代码：** `lib/` 目录存放所有函数共用的 service、type、validator、util。
-- **质量门禁：** Biome（lint + format + import 排序）、TypeScript strict、Vitest（覆盖 `lib/` + `api/`）。Biome 与 typecheck 每次提交都由 husky pre-commit 钩子强制执行；测试由 `npm run validate` 运行（CI 推荐）。详见 [代码质量](#代码质量)。
+- **框架：** Next.js 14（App Router）+ React 18 + TypeScript，本地开发单进程 `next dev`。
+- **样式：** 基于 OKLCH CSS 变量 token 体系 + inline styles + 小型 `primitives.tsx` 组件库。不使用 UI 框架，也不用 CSS Modules。
+- **设计系统：** dark/light 主题、glass/flat 表面、sidebar/topnav/mobile 三种导航形态、运行时可调 accent hue —— 全部走 `useTweaks()`。
+- **后端：** Next.js Route Handlers，位于 `src/app/api/**/route.ts`。共享 service 在 `src/lib/`，用 `@/` 别名引入。
+- **Token 源：** WebPlay-scraped Developer Token（见[配置](#配置)），搭配 `amp-api.music.apple.com` endpoint。
+- **质量门禁：** Biome（lint + format + import 排序）、TypeScript strict、Vitest 覆盖 `src/lib/**` + `src/app/api/**`、husky pre-commit hook。
 
 ## 项目结构
 
 ```
 AM-API/
-├── api/                          # Vercel Serverless 函数（后端）
-│   ├── health.ts                 # GET  /api/health
-│   └── apple-music/
-│       ├── developer-token.ts    # GET  /api/apple-music/developer-token
-│       ├── catalog/
-│       │   └── search.ts         # GET  /api/apple-music/catalog/search
-│       └── me/library/
-│           ├── index.ts          # POST /api/apple-music/me/library
-│           ├── search.ts         # GET  /api/apple-music/me/library/search
-│           └── playlists.ts      # GET  /api/apple-music/me/library/playlists
-├── lib/                          # 所有函数共用的代码
-│   ├── appleMusicService.ts      # 所有对 Apple Music 的 REST 调用
-│   ├── developerTokenService.ts  # JWT (ES256) 签名 + 进程内缓存
-│   ├── env.ts                    # 类型化 env，本地开发加载 dotenv
-│   ├── handler.ts                # withErrorHandler, pickQuery, pickHeader, ...
-│   ├── httpError.ts              # 带 status + details 的 HttpError
-│   ├── validators.ts             # 请求体校验（共享）
-│   ├── validators.test.ts        # Vitest 测试集
-│   └── types/appleMusic.ts       # Apple Music 响应类型
-├── client/                       # Vite + React + TS 前端
-│   └── src/
-│       ├── api/appleMusicApi.ts
-│       ├── components/           # primitives.tsx, icons.tsx, Layout,
-│       │                         # Sidebar, TopNav, MobileNav,
-│       │                         # MusicKitProvider, TweaksPanel
-│       ├── hooks/                # useLocalStorage, useMusicKit, useTweaks
-│       ├── pages/                # Home, Dashboard, Search, Library,
-│       │                         # Organizer, Settings
-│       ├── styles/global.css     # OKLCH tokens + 基础类
-│       └── types/appleMusic.ts
-├── vercel.json                   # buildCommand、outputDirectory、SPA rewrite
-├── .vercelignore                 # 把 .vercel/ 和 .p8 从部署包中剔除
-└── tsconfig.json                 # 对 lib/ + api/ 做 typecheck
+├── src/
+│   ├── app/                  # Next.js App Router
+│   │   ├── layout.tsx        # 根布局（字体 + MusicKit <Script> + Providers）
+│   │   ├── page.tsx          # / 首页
+│   │   ├── globals.css       # OKLCH token + 基础类
+│   │   ├── dashboard/page.tsx
+│   │   ├── search/page.tsx
+│   │   ├── library/page.tsx
+│   │   ├── organizer/page.tsx
+│   │   ├── settings/page.tsx
+│   │   └── api/
+│   │       ├── health/route.ts
+│   │       └── apple-music/
+│   │           ├── developer-token/route.ts
+│   │           ├── catalog/search/route.ts
+│   │           └── me/library/
+│   │               ├── route.ts           # POST 加入资料库
+│   │               ├── search/route.ts
+│   │               └── playlists/route.ts
+│   ├── components/           # primitives、icons、AppShell、Sidebar、TopNav、MobileNav、MusicKitProvider、TweaksPanel、Providers
+│   ├── hooks/                # useLocalStorage、useMusicKit、useTweaks
+│   ├── api/appleMusicApi.ts  # 客户端 fetch 封装
+│   ├── types/appleMusic.ts   # 前端类型
+│   └── lib/                  # 共享：appleMusicService、developerTokenService、validators、nextHandler、httpError、env、types
+├── next.config.js
+├── tsconfig.json
+├── biome.json
+└── vitest.config.ts
 ```
 
 ## 快速开始
 
-本地开发同时跑两个进程：`vercel dev`（提供 `/api/**`）与 Vite（提供带 HMR 的前端，把 `/api` 代理到 `vercel dev`）。
-
 ```bash
-# 1. 安装依赖
+# 1. 安装
 npm install
 
-# 2. 把仓库关联到 Vercel 项目 —— 在 `npm run dev` 之前必做
-#    否则 `vercel dev` 的 link 交互会和 Vite 启动抢终端
-npx vercel login          # 通过 Vercel 账号做 OAuth
-npx vercel link           # 生成 .vercel/ —— 已 gitignore
-
-# 3. 配置环境变量
+# 2. 配置环境 —— 贴入 scraped Developer Token
 cp .env.example .env
-#   MVP 路线：    往 APPLE_MUSIC_DEVELOPER_TOKEN 里贴一个已签好的 Developer Token
-#   签名路线：    填 APPLE_TEAM_ID + APPLE_KEY_ID + APPLE_PRIVATE_KEY（PEM 明文）
+#   填 APPLE_MUSIC_DEVELOPER_TOKEN（见下文 配置）
 
-# 4. 同时启动前后端
+# 3. 启动 dev（单进程，端口 3000）
 npm run dev
-#   vercel dev  →  http://localhost:3000   (serves /api/**)
-#   vite        →  http://localhost:5173   (打开这个 —— 会把 /api 代理到 :3000)
+# → http://localhost:3000
 ```
 
-## 环境变量
+> **本地开了 HTTP 代理（Clash、Surge、Shadowsocks 等）** 时，`curl localhost:3000/...` 可能 503，因为 curl 默认把请求丢进代理。用 `curl --noproxy '*' http://localhost:3000/...`，或 `unset http_proxy https_proxy`。
 
-完整说明见 [`.env.example`](./.env.example)，关键字段：
+## 配置
+
+把 [`.env.example`](./.env.example) 复制成 `.env`，填：
 
 | 变量 | 用途 |
 | --- | --- |
-| `APPLE_MUSIC_DEVELOPER_TOKEN` | 可选的预生成 Token，设置后跳过 JWT 签名流程 |
-| `APPLE_TEAM_ID` | Apple Developer Team ID（10 位） |
-| `APPLE_KEY_ID` | Media Services (.p8) Key 的 Key ID |
-| `APPLE_PRIVATE_KEY` | PEM 明文；**优先级最高**；Vercel 部署**必填** |
-| `APPLE_PRIVATE_KEY_PATH` | 本地备选：`.p8` 文件的绝对路径 |
-| `APPLE_TOKEN_TTL_SECONDS` | JWT 有效期；默认约 6 个月（Apple 上限） |
-| `VITE_API_BASE_URL` | Vite dev 下 `/api` 的代理目标，默认 `http://localhost:3000` |
-| `VITE_DEFAULT_STOREFRONT` | 客户端启动时的默认 storefront（`us`、`hk`、`tw`、`jp`、…） |
+| `APPLE_MUSIC_DEVELOPER_TOKEN` | **必填**。Developer Token 字符串（见下文） |
+| `NEXT_PUBLIC_DEFAULT_STOREFRONT` | 可选。客户端启动时的默认 storefront（`us`、`jp`、`hk`、…），默认 `us` |
+| `APPLE_TEAM_ID` / `APPLE_KEY_ID` / `APPLE_PRIVATE_KEY` / `APPLE_PRIVATE_KEY_PATH` | 可选。仅当想让服务端自签 JWT 时用（需要 Apple Developer Program 订阅） |
 
-## 部署到 Vercel
+### 获取 Developer Token
 
-1. **关联仓库、一键发布：**
-   ```bash
-   npx vercel link       # 只做一次
-   git push              # 如果配了 remote
-   npx vercel --prod     # 从 CLI 直接部署 production
-   ```
-   也可以在 Vercel Dashboard 里导入仓库；framework preset 选 "Other"（构建靠根目录 `vercel.json`）。
-2. **在 *Project Settings → Environment Variables* 里配置**（或用 `vercel env add`）：
-   - MVP：`APPLE_MUSIC_DEVELOPER_TOKEN`
-   - 签名：`APPLE_TEAM_ID` + `APPLE_KEY_ID` + `APPLE_PRIVATE_KEY`（PEM 明文，换行保留或转义都行）
-   - **不要** 在 Vercel 上用 `APPLE_PRIVATE_KEY_PATH` —— 运行时没有持久文件系统
-3. **构建模型：**
-   - Vercel 跑 `npm install` 和 `npm run build`，`client/dist` 作为静态资源
-   - `/api/**` 下每个 `.ts` 被 `@vercel/node` 独立编译成一个 Serverless 函数；从 `lib/` import 的共享代码会被自动追踪并打包
-4. **SPA 路由：** `vercel.json` 的 rewrites 把所有非 `/api/` 的路径重写到 `/index.html`，保证 React Router 在硬刷新时正常。静态文件优先返回（Vercel 的文件系统处理先于 rewrite 执行）。
+**两条路径：**
 
-### Vercel 上的 Developer Token
+**(A) 官方** —— 需要 [Apple Developer Program](https://developer.apple.com/programs/) 订阅（$99/年）。在后台创建一个勾选 MusicKit 的 Media Services Key，下载 `.p8` 文件，然后：
+- 生成一个 Token 贴进 `APPLE_MUSIC_DEVELOPER_TOKEN`，或
+- 设置 `APPLE_TEAM_ID` + `APPLE_KEY_ID` + `APPLE_PRIVATE_KEY`（inline PEM）让服务端自签。
 
-- MVP 流程：把预签的 Token 贴进 `APPLE_MUSIC_DEVELOPER_TOKEN`，函数原样返回并带上 `Cache-Control: private, max-age=300`。
-- 签名流程：把 PEM 内容贴进 `APPLE_PRIVATE_KEY`。`lib/developerTokenService.ts` 在首次请求时用 ES256 签出 JWT，并缓存在热函数的内存里。
+**(B) WebPlay 刮取** —— 免费，但**非官方，随时可能被 Apple 改掉失效**。请求 `https://beta.music.apple.com` 拿 HTML，用正则匹配出 `index-legacy-*.js` 文件名，再请求那个 JS，用正则匹配 `eyJh...` 的 JWT。这个 token：
+- JWT claim 里有 `root_https_origin: ["apple.com"]`，所以所有后端对 Apple 的 fetch 都必须带 `Origin: https://music.apple.com` + 桌面浏览器 User-Agent（`src/lib/appleMusicService.ts` 已做，有测试锁契约）。
+- API base 必须用 `https://amp-api.music.apple.com/v1`（Apple Web player 的 endpoint，和 WebPlay token 成对）。
+- 有效期约 72 天。过期后重新 scrape，覆盖 `.env` 里的 `APPLE_MUSIC_DEVELOPER_TOKEN`。
 
-## 后端接口
+## 部署
 
-| 方法 | 路径 | 备注 |
-| --- | --- | --- |
-| GET | `/api/health` | 健康探测 |
-| GET | `/api/apple-music/developer-token` | 返回 `{ developerToken }`，客户端缓存 5 分钟 |
-| GET | `/api/apple-music/catalog/search?term=&storefront=&types=&limit=` | 曲库搜索代理 |
-| GET | `/api/apple-music/me/library/search?term=&types=&limit=` | 需要 `x-music-user-token` |
-| POST | `/api/apple-music/me/library` | Body `{ "type": "songs"\|"albums"\|"playlists"\|"music-videos", "ids": string[] }`，需要 `x-music-user-token` |
-| GET | `/api/apple-music/me/library/playlists?limit=&offset=` | 需要 `x-music-user-token` |
+纯 Next.js 应用，部署到 Vercel：
 
-所有错误统一返回：
-
-```json
-{ "error": { "message": "string", "status": 401, "details": "optional" } }
+```bash
+npx vercel link     # 只做一次
+npx vercel --prod
 ```
 
-## 如何获取 Apple Music Developer Token
-
-1. 加入 [Apple Developer Program](https://developer.apple.com/programs/)。
-2. 在 [Certificates, Identifiers & Profiles](https://developer.apple.com/account/resources/) 控制台创建一个 **Media Services** Key，勾选 *MusicKit*，下载 `.p8` 文件 —— 只能下载一次。
-3. 记下 Key ID（在 portal 里）和 Team ID（Apple Developer Console 右上角）。
-4. 本地填进 `.env`，生产环境填进 Vercel 的 env vars。`.p8` 文件别放进仓库（已 gitignore）。
-
-## 连接用户
-
-前端从 Apple CDN 加载 [MusicKit on the Web](https://developer.apple.com/documentation/musickitjs) v3。点击 `Connect Apple Music` 后：
-
-1. 从 `/api/apple-music/developer-token` 拉 Developer Token。
-2. 调用 `MusicKit.configure({ developerToken, app })`。
-3. 弹出 Apple 的授权同意页。
-4. 拿到 **Music User Token**，前端存到 `localStorage`，后续请求通过 `x-music-user-token` header 带给后端。
-
-后端从不持久化 Music User Token —— 只是原样转发给 `api.music.apple.com`。
+Vercel 自动识别 Next.js；`npm run build` 产出生产 bundle。环境变量在 Vercel 项目 Dashboard 里配（或 `vercel env add`）。
 
 ## 脚本
 
 ```bash
-npm run dev            # vercel dev + vite 并行
-npm run build          # 构建前端（api 由 Vercel 在部署时构建）
-npm run typecheck      # api + client 并行 tsc
-npm run check          # Biome lint + format + import 排序（全仓）
+npm run dev            # next dev（端口 3000）
+npm run build          # next build
+npm run start          # next start（build 完后跑生产 server）
+npm run typecheck      # tsc --noEmit
+npm run check          # Biome lint + format + import 排序
 npm run check:fix      # 同上，应用 safe autofix
-npm run test           # Vitest 单次运行（lib + api）
+npm run test           # Vitest 单次运行
 npm run test:watch     # Vitest watch 模式
-npm run test:coverage  # Vitest 带 v8 coverage
-npm run validate       # check + typecheck + test 并行（CI 推荐）
-npm run clean          # 清理 client/dist + coverage
+npm run test:coverage  # Vitest + v8 coverage
+npm run validate       # check + typecheck + test 并行（CI）
+npm run clean          # 清理 .next + coverage
 ```
 
 ## 代码质量
 
 - **Biome** 一个二进制处理 lint、formatter、import 排序。配置：[`biome.json`](./biome.json)。
-- **TypeScript strict 模式** 覆盖 `lib/`、`api/`、`client/`。
-- **Vitest 2** 覆盖 `lib/**` 和 `api/**`（Node environment）。测试文件和源文件并排：`foo.ts` → `foo.test.ts`。配置：[`vitest.config.ts`](./vitest.config.ts)。
-- **Pre-commit 门禁：** `.husky/pre-commit` 每次提交都会跑 `npm run check`（Biome，全仓）和 `npm run typecheck`。`npm run validate` 额外跑 `npm test`，CI 应该走 `validate`。
-- 紧急情况需绕过时可用 `git commit --no-verify`，慎用。
+- **TypeScript strict 模式** 覆盖整个 `src/` 树。路径别名 `@/*` → `./src/*`。
+- **Vitest 2** 覆盖 `src/lib/**` 和 `src/app/api/**`（Node environment）。
+- **Pre-commit 门禁：** `.husky/pre-commit` 每次提交跑 `npm run check` + `npm run typecheck`，测试由 `validate` 运行（CI）。
+- 紧急绕过：`git commit --no-verify`，慎用。
 
 ## 路线图
 
 - [x] Phase 1 — 项目骨架
 - [x] Phase 2 — 后端 service 层
-- [x] Phase 3 — React router、布局、页面
+- [x] Phase 3 — React 路由、布局、页面
 - [x] Phase 4 — MusicKit 授权流
 - [x] Phase 5 — Apple Music 曲库搜索
 - [x] Phase 6 — 用户资料库搜索
 - [x] Phase 7 — Add-to-library
 - [x] Phase 8 — 资料库 playlist 读取
-- [x] Phase 9 — 错误处理、empty/loading 状态、README 完善
-- [x] Phase 10 — Vercel 部署目标（每路由 Serverless 函数、共享 `/lib`）
-- [x] Phase 11 — 删除 Express；单一后端 runtime（本地 `vercel dev`，生产走 function）
-- [x] Phase 12 — Biome + husky pre-commit 门禁；MusicKitProvider ref → state 重构（不再需要 hook-deps suppressions）；StrictMode 下的 `MusicKit.configure()` 安全
-- [x] Phase 13 — Vitest 2 覆盖 `lib/**` 和 `api/**`，为 `parseAddToLibraryBody` 写了种子测试；`npm run validate` 并行跑 check + typecheck + test
-- [x] Phase 14 — 按 `ui-design/` 原型完整重写 UI：OKLCH token 体系、`primitives.tsx` 组件库（Button、StatusDot、Pill、AddButton 含 idle/adding/added/failed 四态、Toast、Segmented、PageHeader、StatCard、Artwork）、35 个 stroke 风格图标、响应式 Layout（sidebar/topnav/mobile）、新增 Dashboard 页、`TweaksPanel` 运行时切换主题/表面/导航/色相。彻底移除 CSS Modules，改用 inline style + CSS 变量
+- [x] Phase 9 — 错误处理、empty/loading 状态
+- [x] Phase 10 — Vercel 部署（每路由 Serverless 函数）
+- [x] Phase 11 — 删除 Express；单一后端 runtime
+- [x] Phase 12 — Biome + husky pre-commit 门禁；MusicKitProvider ref→state 重构
+- [x] Phase 13 — Vitest 2 + `parseAddToLibraryBody` 种子测试
+- [x] Phase 14 — 按原型重写 UI（OKLCH token、primitives、Dashboard 页、响应式 shell）
+- [x] Phase 15 — 支持 WebPlay scraped Developer Token，endpoint 切到 `amp-api.music.apple.com`，加 Origin/UA header 及 3 条契约测试
+- [x] Phase 16 — 重构到 Next.js 14 App Router（单进程 `next dev`、file-system routing、`src/` 布局、`@/` 别名）
 - [ ] 接下来 — Organizer 功能（按艺人/专辑分组、找缺失歌曲、批量加入 playlist）
 - [ ] 接下来 — Music User Token 改走服务端 session（替换 `localStorage`）
 - [ ] 接下来 — 曲库/资料库结果分页
-- [ ] 接下来 — 前端 React 组件测试（需要在 `client/` 下配 `jsdom` + `@testing-library/react`）
+- [ ] 接下来 — 前端 React 组件测试（`src/` 下配 `jsdom` + `@testing-library/react`）
 
 ## 已知限制 (MVP)
 
 - Music User Token 存在 `localStorage`。生产环境应改成 HttpOnly session cookie 或服务端存储。
-- Vercel 函数没有显式 CORS —— 依赖浏览器的同源策略（前端与 `/api` 同域）。跨域调用 `/api/apple-music/developer-token` 会成功，这在 MVP 阶段可接受，因为 Developer Token 本身设计上就是要交给浏览器的。
-- 无限流处理 —— Apple 的错误响应原样带在错误体的 `details` 字段里透传。
-- `createLibraryPlaylist` 在 `lib/appleMusicService.ts` 里已经实现，但暂未暴露为路由。
-- 冷启动函数会重新签一次 Developer Token。`jsonwebtoken` ES256 签名约 1ms，廉价但非零开销。
-- `vercel dev` 首次 link 需要 Vercel 账号。纯离线开发可以对 preview URL 做调试。
+- 无限流处理 —— Apple 的错误响应原样透传。
+- `createLibraryPlaylist` 在 `src/lib/appleMusicService.ts` 里已实现，但暂未暴露为路由。
+- **WebPlay token 路径是非官方的**。Apple 改前端 bundle 命名、JWT claim 结构或加更严的 origin 校验，随时可能失效。心里有数再用。
+- 本地 HTTP 代理（Clash 等）会拦 `curl localhost:3000`，用 `--noproxy '*'` 或 `unset http_proxy`。

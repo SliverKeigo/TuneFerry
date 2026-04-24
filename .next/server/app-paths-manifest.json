@@ -1,0 +1,6 @@
+{
+  "/api/apple-music/developer-token/route": "app/api/apple-music/developer-token/route.js",
+  "/api/health/route": "app/api/health/route.js",
+  "/page": "app/page.js",
+  "/api/apple-music/catalog/search/route": "app/api/apple-music/catalog/search/route.js"
+}
