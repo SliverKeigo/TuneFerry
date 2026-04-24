@@ -1,6 +1,6 @@
 // Frontend-side mirror of the Apple Music types we care about. Kept in sync
-// with `server/src/types/appleMusic.ts` but deliberately duplicated to avoid
-// a shared-package build step for MVP.
+// with `lib/types/appleMusic.ts` but deliberately duplicated to avoid a
+// shared-package build step for MVP.
 
 export interface AppleMusicArtwork {
   url: string;

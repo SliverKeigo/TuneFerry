@@ -8,7 +8,7 @@
   ],
   "scripts": {
     "dev": "npm-run-all --parallel dev:api dev:client",
-    "dev:api": "vercel dev --listen 3000 --yes",
+    "dev:api": "vercel dev --listen 3000",
     "dev:client": "npm --workspace client run dev",
     "build": "npm --workspace client run build",
     "typecheck": "npm-run-all --parallel typecheck:api typecheck:client",

@@ -45,7 +45,8 @@ The local dev loop uses two processes in parallel: `vercel dev` (serves `/api/**
 # 1. Install
 npm install
 
-# 2. Link the repo to a Vercel project (first time only)
+# 2. Link the repo to a Vercel project — REQUIRED before `npm run dev`
+#    Otherwise `vercel dev` races an interactive link prompt against Vite's boot.
 npx vercel login          # OAuth via your Vercel account
 npx vercel link           # creates .vercel/ — gitignored
 
@@ -59,8 +60,6 @@ npm run dev
 #   vercel dev  →  http://localhost:3000   (serves /api/**)
 #   vite        →  http://localhost:5173   (open this — proxies /api to :3000)
 ```
-
-> `vercel link` isn't strictly required until you run `vercel deploy`; `vercel dev` works on an un-linked project too but will prompt on first run.
 
 ## Environment Variables
 

@@ -3,8 +3,7 @@ import dotenv from 'dotenv';
 const isVercel = Boolean(process.env.VERCEL || process.env.VERCEL_ENV);
 
 // Local dev only. Vercel injects env vars directly, so skipping dotenv there
-// avoids a pointless fs lookup from inside the ncc bundle (where `__dirname`
-// points into a temp build dir and a relative `.env` would never resolve).
+// avoids a pointless fs lookup from inside the ncc bundle.
 //
 // Letting dotenv default to `<cwd>/.env` works for every local entrypoint we
 // care about because they all run from the repo root:
@@ -15,7 +14,7 @@ if (!isVercel) {
   dotenv.config();
 }
 
-function requireString(value: string | undefined, fallback?: string): string | undefined {
+function readString(value: string | undefined, fallback?: string): string | undefined {
   if (value == null || value === '') return fallback;
   return value;
 }
@@ -26,15 +25,8 @@ function parseNumber(value: string | undefined, fallback: number): number {
   return Number.isFinite(n) ? n : fallback;
 }
 
-function parseOrigins(raw: string | undefined): string[] {
-  if (!raw) return ['http://localhost:5173'];
-  return raw.split(',').map((s) => s.trim()).filter(Boolean);
-}
-
 export interface AppEnv {
-  port: number;
   nodeEnv: string;
-  clientOrigins: string[];
 
   prebakedDeveloperToken?: string;
 
@@ -49,16 +41,14 @@ export interface AppEnv {
 }
 
 export const env: AppEnv = {
-  port: parseNumber(process.env.PORT, 8787),
-  nodeEnv: requireString(process.env.NODE_ENV, 'development')!,
-  clientOrigins: parseOrigins(process.env.CLIENT_ORIGIN),
+  nodeEnv: readString(process.env.NODE_ENV, 'development')!,
 
-  prebakedDeveloperToken: requireString(process.env.APPLE_MUSIC_DEVELOPER_TOKEN),
+  prebakedDeveloperToken: readString(process.env.APPLE_MUSIC_DEVELOPER_TOKEN),
 
-  teamId: requireString(process.env.APPLE_TEAM_ID),
-  keyId: requireString(process.env.APPLE_KEY_ID),
-  privateKeyPath: requireString(process.env.APPLE_PRIVATE_KEY_PATH),
-  privateKeyInline: requireString(process.env.APPLE_PRIVATE_KEY),
+  teamId: readString(process.env.APPLE_TEAM_ID),
+  keyId: readString(process.env.APPLE_KEY_ID),
+  privateKeyPath: readString(process.env.APPLE_PRIVATE_KEY_PATH),
+  privateKeyInline: readString(process.env.APPLE_PRIVATE_KEY),
 
   tokenTtlSeconds: parseNumber(process.env.APPLE_TOKEN_TTL_SECONDS, 15_777_000),
 
