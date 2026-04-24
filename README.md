@@ -1,5 +1,7 @@
 # Apple Music Library Organizer
 
+**English** · [简体中文](./README.zh-CN.md)
+
 A web app that connects to your Apple Music account, searches the Apple Music catalog and your personal library, and adds tracks/albums/playlists to your library with one click. Deployed as a single Vercel project — static frontend + per-route serverless functions on the same origin.
 
 ## Tech Stack
