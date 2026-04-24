@@ -6,7 +6,8 @@
 
 ## 技术栈
 
-- **前端：** React 18 + TypeScript，基于 Vite 构建。刻意使用原生 CSS Modules，暂不引入 UI 框架。
+- **前端：** React 18 + TypeScript，基于 Vite 构建。样式走 inline styles + OKLCH 的 CSS 变量 token 体系，加一套小型 `primitives.tsx` 组件库 —— 不引入 UI 框架，也不用 CSS Modules。
+- **设计系统：** 基于 OKLCH 的 dark/light 主题、glass/flat 表面、sidebar/topnav/mobile 三种导航形态、运行时可调 accent hue。见 `client/src/styles/global.css` + `client/src/hooks/useTweaks.ts` + `client/src/components/TweaksPanel.tsx`。
 - **后端：** `/api/**` 下每个路由一个 Serverless 函数，运行在 Vercel 的 `@vercel/node` runtime。负责代理 Apple Music API、签发 Developer Token。
 - **本地开发：** `vercel dev` 在本机跑同一份函数，Vite 做前端 HMR 并把 `/api` 代理给它。
 - **共享代码：** `lib/` 目录存放所有函数共用的 service、type、validator、util。
@@ -33,8 +34,19 @@ AM-API/
 │   ├── handler.ts                # withErrorHandler, pickQuery, pickHeader, ...
 │   ├── httpError.ts              # 带 status + details 的 HttpError
 │   ├── validators.ts             # 请求体校验（共享）
+│   ├── validators.test.ts        # Vitest 测试集
 │   └── types/appleMusic.ts       # Apple Music 响应类型
 ├── client/                       # Vite + React + TS 前端
+│   └── src/
+│       ├── api/appleMusicApi.ts
+│       ├── components/           # primitives.tsx, icons.tsx, Layout,
+│       │                         # Sidebar, TopNav, MobileNav,
+│       │                         # MusicKitProvider, TweaksPanel
+│       ├── hooks/                # useLocalStorage, useMusicKit, useTweaks
+│       ├── pages/                # Home, Dashboard, Search, Library,
+│       │                         # Organizer, Settings
+│       ├── styles/global.css     # OKLCH tokens + 基础类
+│       └── types/appleMusic.ts
 ├── vercel.json                   # buildCommand、outputDirectory、SPA rewrite
 ├── .vercelignore                 # 把 .vercel/ 和 .p8 从部署包中剔除
 └── tsconfig.json                 # 对 lib/ + api/ 做 typecheck
@@ -175,9 +187,11 @@ npm run clean          # 清理 client/dist + coverage
 - [x] Phase 11 — 删除 Express；单一后端 runtime（本地 `vercel dev`，生产走 function）
 - [x] Phase 12 — Biome + husky pre-commit 门禁；MusicKitProvider ref → state 重构（不再需要 hook-deps suppressions）；StrictMode 下的 `MusicKit.configure()` 安全
 - [x] Phase 13 — Vitest 2 覆盖 `lib/**` 和 `api/**`，为 `parseAddToLibraryBody` 写了种子测试；`npm run validate` 并行跑 check + typecheck + test
+- [x] Phase 14 — 按 `ui-design/` 原型完整重写 UI：OKLCH token 体系、`primitives.tsx` 组件库（Button、StatusDot、Pill、AddButton 含 idle/adding/added/failed 四态、Toast、Segmented、PageHeader、StatCard、Artwork）、35 个 stroke 风格图标、响应式 Layout（sidebar/topnav/mobile）、新增 Dashboard 页、`TweaksPanel` 运行时切换主题/表面/导航/色相。彻底移除 CSS Modules，改用 inline style + CSS 变量
 - [ ] 接下来 — Organizer 功能（按艺人/专辑分组、找缺失歌曲、批量加入 playlist）
 - [ ] 接下来 — Music User Token 改走服务端 session（替换 `localStorage`）
 - [ ] 接下来 — 曲库/资料库结果分页
+- [ ] 接下来 — 前端 React 组件测试（需要在 `client/` 下配 `jsdom` + `@testing-library/react`）
 
 ## 已知限制 (MVP)
 

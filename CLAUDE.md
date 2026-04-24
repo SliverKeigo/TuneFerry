@@ -36,6 +36,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 根目录有两份 README：`README.md`（英文）和 `README.zh-CN.md`（中文）。**任一份变更后，必须把对应内容同步到另一份**。用户可以通过 `/sync-readme` slash command 触发系统化同步。
 
+## 前端样式约定
+
+**不要用 CSS Modules**。`client/src/**/*.module.css` 已全量删除。所有样式走两条路：
+
+1. **全局 token / 基础类**：`client/src/styles/global.css` 定义 OKLCH CSS 变量（`--accent`、`--panel`、`--text`、`--hairline` 等）和基础类（`.panel`、`.kbd`、`.input-native`、`.app-bg`、`.page-enter`）。新增共享样式放这里。
+2. **组件内 inline styles**：逻辑 / 布局 / 一次性样式全部用 `style={{ ... }}` 写在组件里，读 CSS 变量即可在主题切换时生效。伪类（`:hover`、`:focus-visible`）用全局类；实在需要动态的用 `onMouseEnter/Leave` + `e.currentTarget.style`。
+
+**组件库在 `client/src/components/primitives.tsx`** —— 写新页面时**优先复用**（Button、Pill、StatusDot、AddButton、Segmented、PageHeader、SectionHeader、StatCard、Artwork、ToastProvider + useToast 等）。图标统一从 `client/src/components/icons.tsx` 以 namespace 方式 import：`import * as Icon from '../components/icons'` 然后 `<Icon.Search size={18} />`。
+
+**主题/外观运行时可切**：`useTweaks()` 管理 theme (dark/light) / surface (glass/flat) / nav (sidebar/topnav) / accentHue，持久化到 `localStorage`，并镜像到 `<html>` 的 `data-theme` / `data-surface` 属性和 `--accent-h` CSS 变量。`<TweaksPanel />` 作为 UI 入口（当前挂在 Settings 页的 Appearance section）。
+
 ## Apple Music 约束（已定型，不要改）
 
 - Developer Token 两种模式：

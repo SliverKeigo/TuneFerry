@@ -6,7 +6,8 @@ A web app that connects to your Apple Music account, searches the Apple Music ca
 
 ## Tech Stack
 
-- **Frontend:** React 18 + TypeScript, built with Vite. Plain CSS Modules — no UI framework on purpose.
+- **Frontend:** React 18 + TypeScript, built with Vite. Styling is inline styles driven by a CSS-variable token system (OKLCH), with a small `primitives.tsx` component library — no UI framework, no CSS Modules.
+- **Design system:** OKLCH-based light/dark themes, glass/flat surface, sidebar/topnav/mobile navigation modes, runtime-configurable accent hue. See `client/src/styles/global.css` + `client/src/hooks/useTweaks.ts` + `client/src/components/TweaksPanel.tsx`.
 - **Backend:** Per-route serverless functions under `/api/**`, running on Vercel's `@vercel/node` runtime. Apple Music API proxy + Developer Token minting.
 - **Local dev:** `vercel dev` runs the exact same functions on your machine, proxied by Vite for HMR.
 - **Shared:** `lib/` holds every service, type, validator, and util consumed by the functions.
@@ -33,8 +34,19 @@ AM-API/
 │   ├── handler.ts                # withErrorHandler, pickQuery, pickHeader, ...
 │   ├── httpError.ts              # HttpError with status + details
 │   ├── validators.ts             # Request body validation (shared)
+│   ├── validators.test.ts        # Vitest suite
 │   └── types/appleMusic.ts       # Apple Music response shapes
 ├── client/                       # Vite + React + TS frontend
+│   └── src/
+│       ├── api/appleMusicApi.ts
+│       ├── components/           # primitives.tsx, icons.tsx, Layout,
+│       │                         # Sidebar, TopNav, MobileNav,
+│       │                         # MusicKitProvider, TweaksPanel
+│       ├── hooks/                # useLocalStorage, useMusicKit, useTweaks
+│       ├── pages/                # Home, Dashboard, Search, Library,
+│       │                         # Organizer, Settings
+│       ├── styles/global.css     # OKLCH tokens + base classes
+│       └── types/appleMusic.ts
 ├── vercel.json                   # buildCommand, outputDirectory, SPA rewrites
 ├── .vercelignore                 # strips .vercel/ and .p8 from deploy bundles
 └── tsconfig.json                 # typechecks lib/ + api/
@@ -175,9 +187,11 @@ npm run clean          # rm client/dist + coverage
 - [x] Phase 11 — Dropped Express; single backend runtime (`vercel dev` locally, functions in prod)
 - [x] Phase 12 — Biome + husky pre-commit gate; MusicKitProvider ref → state refactor (no more hook-deps suppressions); StrictMode-safe `MusicKit.configure()`
 - [x] Phase 13 — Vitest 2 over `lib/**` and `api/**` with a seed suite for `parseAddToLibraryBody`; `npm run validate` now runs check + typecheck + test in parallel
+- [x] Phase 14 — UI rebuilt to match the design prototype (`ui-design/`): OKLCH token system, `primitives.tsx` component library (Button, StatusDot, Pill, AddButton with idle/adding/added/failed states, Toast, Segmented, PageHeader, StatCard, Artwork), 35 stroke-based icons, responsive Layout (sidebar/topnav/mobile), new Dashboard page, `TweaksPanel` for runtime theme/surface/nav/accent control. CSS Modules dropped entirely in favour of inline styles + CSS variables
 - [ ] Next — Organizer actions (group by artist/album, missing tracks, bulk add to playlist)
 - [ ] Next — Server-side session for Music User Token (replace `localStorage`)
 - [ ] Next — Paginated catalog/library results
+- [ ] Next — Client-side React tests (requires `jsdom` + `@testing-library/react` under `client/`)
 
 ## Known Limitations (MVP)
 
