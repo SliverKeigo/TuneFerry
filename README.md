@@ -8,6 +8,7 @@ A web app that connects to your Apple Music account, searches the Apple Music ca
 - **Backend:** Per-route serverless functions under `/api/**`, running on Vercel's `@vercel/node` runtime. Apple Music API proxy + Developer Token minting.
 - **Local dev:** `vercel dev` runs the exact same functions on your machine, proxied by Vite for HMR.
 - **Shared:** `lib/` holds every service, type, validator, and util consumed by the functions.
+- **Quality gate:** Biome (lint + format + import sort) and TypeScript strict, both enforced on every commit by a husky pre-commit hook. See [Code Quality](#code-quality).
 
 ## Project Layout
 
@@ -166,6 +167,7 @@ npm run clean        # rm client/dist
 - [x] Phase 9 — Error handling, empty/loading states, README polish
 - [x] Phase 10 — Vercel deployment target (per-route serverless functions, shared `/lib`)
 - [x] Phase 11 — Dropped Express; single backend runtime (`vercel dev` locally, functions in prod)
+- [x] Phase 12 — Biome + husky pre-commit gate; MusicKitProvider ref → state refactor (no more hook-deps suppressions); StrictMode-safe `MusicKit.configure()`
 - [ ] Next — Organizer actions (group by artist/album, missing tracks, bulk add to playlist)
 - [ ] Next — Server-side session for Music User Token (replace `localStorage`)
 - [ ] Next — Paginated catalog/library results
