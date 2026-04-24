@@ -10,7 +10,7 @@
 - **后端：** `/api/**` 下每个路由一个 Serverless 函数，运行在 Vercel 的 `@vercel/node` runtime。负责代理 Apple Music API、签发 Developer Token。
 - **本地开发：** `vercel dev` 在本机跑同一份函数，Vite 做前端 HMR 并把 `/api` 代理给它。
 - **共享代码：** `lib/` 目录存放所有函数共用的 service、type、validator、util。
-- **质量门禁：** Biome（lint + format + import 排序）与 TypeScript strict，每次提交都由 husky pre-commit 钩子强制执行。详见 [代码质量](#代码质量)。
+- **质量门禁：** Biome（lint + format + import 排序）、TypeScript strict、Vitest（覆盖 `lib/` + `api/`）。Biome 与 typecheck 每次提交都由 husky pre-commit 钩子强制执行；测试由 `npm run validate` 运行（CI 推荐）。详见 [代码质量](#代码质量)。
 
 ## 项目结构
 
@@ -140,20 +140,24 @@ npm run dev
 ## 脚本
 
 ```bash
-npm run dev          # vercel dev + vite 并行
-npm run build        # 构建前端（api 由 Vercel 在部署时构建）
-npm run typecheck    # api + client 并行 tsc
-npm run check        # Biome lint + format + import 排序（全仓）
-npm run check:fix    # 同上，应用 safe autofix
-npm run validate     # check + typecheck 并行（CI 推荐）
-npm run clean        # 清理 client/dist
+npm run dev            # vercel dev + vite 并行
+npm run build          # 构建前端（api 由 Vercel 在部署时构建）
+npm run typecheck      # api + client 并行 tsc
+npm run check          # Biome lint + format + import 排序（全仓）
+npm run check:fix      # 同上，应用 safe autofix
+npm run test           # Vitest 单次运行（lib + api）
+npm run test:watch     # Vitest watch 模式
+npm run test:coverage  # Vitest 带 v8 coverage
+npm run validate       # check + typecheck + test 并行（CI 推荐）
+npm run clean          # 清理 client/dist + coverage
 ```
 
 ## 代码质量
 
 - **Biome** 一个二进制处理 lint、formatter、import 排序。配置：[`biome.json`](./biome.json)。
 - **TypeScript strict 模式** 覆盖 `lib/`、`api/`、`client/`。
-- **Pre-commit 门禁：** `.husky/pre-commit` 每次提交都会跑 `npm run check`（Biome，全仓）和 `npm run typecheck`。任一失败则拒绝提交。`npm install` 后 husky 的 `prepare` 脚本会自动安装 hook。
+- **Vitest 2** 覆盖 `lib/**` 和 `api/**`（Node environment）。测试文件和源文件并排：`foo.ts` → `foo.test.ts`。配置：[`vitest.config.ts`](./vitest.config.ts)。
+- **Pre-commit 门禁：** `.husky/pre-commit` 每次提交都会跑 `npm run check`（Biome，全仓）和 `npm run typecheck`。`npm run validate` 额外跑 `npm test`，CI 应该走 `validate`。
 - 紧急情况需绕过时可用 `git commit --no-verify`，慎用。
 
 ## 路线图
@@ -170,6 +174,7 @@ npm run clean        # 清理 client/dist
 - [x] Phase 10 — Vercel 部署目标（每路由 Serverless 函数、共享 `/lib`）
 - [x] Phase 11 — 删除 Express；单一后端 runtime（本地 `vercel dev`，生产走 function）
 - [x] Phase 12 — Biome + husky pre-commit 门禁；MusicKitProvider ref → state 重构（不再需要 hook-deps suppressions）；StrictMode 下的 `MusicKit.configure()` 安全
+- [x] Phase 13 — Vitest 2 覆盖 `lib/**` 和 `api/**`，为 `parseAddToLibraryBody` 写了种子测试；`npm run validate` 并行跑 check + typecheck + test
 - [ ] 接下来 — Organizer 功能（按艺人/专辑分组、找缺失歌曲、批量加入 playlist）
 - [ ] 接下来 — Music User Token 改走服务端 session（替换 `localStorage`）
 - [ ] 接下来 — 曲库/资料库结果分页

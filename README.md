@@ -10,7 +10,7 @@ A web app that connects to your Apple Music account, searches the Apple Music ca
 - **Backend:** Per-route serverless functions under `/api/**`, running on Vercel's `@vercel/node` runtime. Apple Music API proxy + Developer Token minting.
 - **Local dev:** `vercel dev` runs the exact same functions on your machine, proxied by Vite for HMR.
 - **Shared:** `lib/` holds every service, type, validator, and util consumed by the functions.
-- **Quality gate:** Biome (lint + format + import sort) and TypeScript strict, both enforced on every commit by a husky pre-commit hook. See [Code Quality](#code-quality).
+- **Quality gate:** Biome (lint + format + import sort), TypeScript strict, and Vitest (on `lib/` + `api/`). Biome + typecheck are enforced on every commit by a husky pre-commit hook; tests run in `npm run validate` (CI). See [Code Quality](#code-quality).
 
 ## Project Layout
 
@@ -140,20 +140,24 @@ The backend never persists the Music User Token — it only forwards it to `api.
 ## Scripts
 
 ```bash
-npm run dev          # vercel dev + vite in parallel
-npm run build        # build the client (api is built by Vercel on deploy)
-npm run typecheck    # api + client in parallel
-npm run check        # Biome lint + format + import sort (whole repo)
-npm run check:fix    # same, with safe autofixes applied
-npm run validate     # check + typecheck in parallel (what CI should run)
-npm run clean        # rm client/dist
+npm run dev            # vercel dev + vite in parallel
+npm run build          # build the client (api is built by Vercel on deploy)
+npm run typecheck      # api + client in parallel
+npm run check          # Biome lint + format + import sort (whole repo)
+npm run check:fix      # same, with safe autofixes applied
+npm run test           # Vitest, single run (lib + api)
+npm run test:watch     # Vitest in watch mode
+npm run test:coverage  # Vitest with v8 coverage
+npm run validate       # check + typecheck + test in parallel (what CI should run)
+npm run clean          # rm client/dist + coverage
 ```
 
 ## Code Quality
 
 - **Biome** handles lint, formatter, and import sort in a single binary. Config: [`biome.json`](./biome.json).
 - **TypeScript strict mode** across `lib/`, `api/`, and `client/`.
-- **Pre-commit gate:** `.husky/pre-commit` runs `npm run check` (Biome, whole repo) and `npm run typecheck` before every commit. The hook is installed automatically by `npm install` via husky's `prepare` script. If either check fails, the commit is rejected.
+- **Vitest 2** covers `lib/**` and `api/**` (Node environment). Tests live next to sources (`foo.ts` → `foo.test.ts`). Config: [`vitest.config.ts`](./vitest.config.ts).
+- **Pre-commit gate:** `.husky/pre-commit` runs `npm run check` (Biome, whole repo) and `npm run typecheck` before every commit. `npm run validate` additionally runs `npm test`; CI should use `validate`.
 - If you need to bypass the hook for an emergency, `git commit --no-verify` still works — use sparingly.
 
 ## Roadmap
@@ -170,6 +174,7 @@ npm run clean        # rm client/dist
 - [x] Phase 10 — Vercel deployment target (per-route serverless functions, shared `/lib`)
 - [x] Phase 11 — Dropped Express; single backend runtime (`vercel dev` locally, functions in prod)
 - [x] Phase 12 — Biome + husky pre-commit gate; MusicKitProvider ref → state refactor (no more hook-deps suppressions); StrictMode-safe `MusicKit.configure()`
+- [x] Phase 13 — Vitest 2 over `lib/**` and `api/**` with a seed suite for `parseAddToLibraryBody`; `npm run validate` now runs check + typecheck + test in parallel
 - [ ] Next — Organizer actions (group by artist/album, missing tracks, bulk add to playlist)
 - [ ] Next — Server-side session for Music User Token (replace `localStorage`)
 - [ ] Next — Paginated catalog/library results
