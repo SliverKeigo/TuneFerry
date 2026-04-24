@@ -1,0 +1,7 @@
+# Keep the Vercel build context small: we don't deploy the Express dev server.
+server/
+**/node_modules
+**/dist
+.env
+.env.*
+*.p8

@@ -75,7 +75,6 @@ export type CatalogSearchResultType =
   | 'playlists'
   | 'music-videos';
 
-// Shape of /v1/catalog/{storefront}/search
 export interface AppleMusicSearchResponse {
   results: Partial<
     Record<
@@ -89,7 +88,6 @@ export interface AppleMusicSearchResponse {
   >;
 }
 
-// Shape of /v1/me/library/search
 export interface AppleMusicLibrarySearchResponse {
   results: Record<
     string,
@@ -106,6 +104,4 @@ export interface AppleMusicLibraryPlaylistsResponse {
   next?: string;
 }
 
-// Library resource types accepted by POST /v1/me/library. Apple groups them
-// as query parameters `ids[<type>]=…` — see addResourcesToLibrary in the docs.
 export type LibraryAddResourceType = 'songs' | 'albums' | 'playlists' | 'music-videos';

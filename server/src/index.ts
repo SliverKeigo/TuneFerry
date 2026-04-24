@@ -1,6 +1,6 @@
 import express from 'express';
 import cors from 'cors';
-import { env } from './config/env';
+import { env } from '../../lib/env';
 import { appleMusicRouter } from './routes/appleMusicRoutes';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 
@@ -23,6 +23,8 @@ app.use('/api/apple-music', appleMusicRouter);
 app.use(notFoundHandler);
 app.use(errorHandler);
 
+// Only listen when run directly (local dev). In a Vercel deploy we never
+// import this file; each route is its own serverless function in /api.
 app.listen(env.port, () => {
   // eslint-disable-next-line no-console
   console.log(

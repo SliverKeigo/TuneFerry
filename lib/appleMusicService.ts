@@ -1,11 +1,11 @@
-import { HttpError } from '../utils/httpError';
+import { HttpError } from './httpError';
 import { getDeveloperToken } from './developerTokenService';
 import type {
   AppleMusicLibraryPlaylistsResponse,
   AppleMusicLibrarySearchResponse,
   AppleMusicSearchResponse,
   LibraryAddResourceType,
-} from '../types/appleMusic';
+} from './types/appleMusic';
 
 const APPLE_MUSIC_API_BASE = 'https://api.music.apple.com/v1';
 
@@ -16,10 +16,6 @@ interface RequestOptions {
   body?: unknown;
 }
 
-/**
- * Low-level wrapper around the Apple Music REST API.
- * Always attaches the Developer Token; caller may add a Music User Token.
- */
 async function appleFetch<T>(path: string, opts: RequestOptions = {}): Promise<T> {
   const developerToken = getDeveloperToken();
   const url = new URL(`${APPLE_MUSIC_API_BASE}${path}`);
@@ -49,7 +45,6 @@ async function appleFetch<T>(path: string, opts: RequestOptions = {}): Promise<T
   });
 
   if (!response.ok) {
-    // Apple returns JSON error bodies with a top-level `errors` array.
     let payload: unknown = null;
     try {
       payload = await response.json();
@@ -63,7 +58,6 @@ async function appleFetch<T>(path: string, opts: RequestOptions = {}): Promise<T
     );
   }
 
-  // Some endpoints (e.g. POST /me/library) return 202 with no body.
   const text = await response.text();
   if (!text) return undefined as T;
   return JSON.parse(text) as T;
@@ -79,9 +73,6 @@ function requireMusicUserToken(token: string | undefined): string {
   return token;
 }
 
-/**
- * GET /v1/catalog/{storefront}/search
- */
 export async function searchCatalog(params: {
   term: string;
   storefront?: string;
@@ -99,9 +90,6 @@ export async function searchCatalog(params: {
   });
 }
 
-/**
- * GET /v1/me/library/search
- */
 export async function searchLibrary(params: {
   term: string;
   types?: string;
@@ -120,12 +108,6 @@ export async function searchLibrary(params: {
   });
 }
 
-/**
- * POST /v1/me/library
- *
- * Apple expects IDs as repeated query params grouped by resource type:
- *   ?ids[songs]=123,456&ids[albums]=789
- */
 export async function addToLibrary(params: {
   type: LibraryAddResourceType;
   ids: string[];
@@ -136,8 +118,6 @@ export async function addToLibrary(params: {
     throw new HttpError(400, 'ids must be a non-empty array');
   }
 
-  // The Apple endpoint uses a non-standard key (`ids[type]`) that URLSearchParams
-  // would percent-encode. Build the query string manually so brackets stay intact.
   const query = `ids%5B${encodeURIComponent(params.type)}%5D=${params.ids
     .map((id) => encodeURIComponent(id))
     .join(',')}`;
@@ -167,9 +147,6 @@ export async function addToLibrary(params: {
   }
 }
 
-/**
- * GET /v1/me/library/playlists
- */
 export async function getLibraryPlaylists(params: {
   musicUserToken: string | undefined;
   limit?: number;
@@ -186,11 +163,8 @@ export async function getLibraryPlaylists(params: {
 }
 
 /**
- * POST /v1/me/library/playlists
- *
- * Not wired to a route yet — left here as a pre-declared extension point so
- * the Organizer can eventually create playlists without us restructuring the
- * service layer.
+ * POST /v1/me/library/playlists — pre-declared extension point. Not wired to
+ * a route yet; Organizer features will consume this.
  */
 export async function createLibraryPlaylist(params: {
   name: string;

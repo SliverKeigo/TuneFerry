@@ -1,5 +1,5 @@
 import { NextFunction, Request, Response } from 'express';
-import { HttpError } from '../utils/httpError';
+import { HttpError } from '../../../lib/httpError';
 
 export function notFoundHandler(_req: Request, res: Response) {
   res.status(404).json({
@@ -11,7 +11,7 @@ export function errorHandler(
   err: unknown,
   _req: Request,
   res: Response,
-  // Express' error-handling signature requires four args even if we don't use `next`.
+  // Express' 4-arg error middleware signature.
   _next: NextFunction,
 ) {
   if (err instanceof HttpError) {

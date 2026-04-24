@@ -1,12 +1,14 @@
-import 'dotenv/config';
-import path from 'path';
-
-// Load `.env` from the repo root (one level up from `server/`). We also call
-// `dotenv/config` above which honours the CWD — when `npm run dev:server` runs
-// from the workspace root this already covers us. The explicit call below
-// makes things work if someone runs `npm run dev` directly inside `server/`.
+import fs from 'node:fs';
+import path from 'node:path';
 import dotenv from 'dotenv';
-dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
+
+// Load the repo-root `.env` for local development. On Vercel the values come
+// straight from the runtime env, so `.env` won't exist inside the deployed
+// bundle and we silently skip.
+const rootEnvPath = path.resolve(__dirname, '../.env');
+if (fs.existsSync(rootEnvPath)) {
+  dotenv.config({ path: rootEnvPath, override: false });
+}
 
 function requireString(value: string | undefined, fallback?: string): string | undefined {
   if (value == null || value === '') return fallback;
@@ -19,26 +21,26 @@ function parseNumber(value: string | undefined, fallback: number): number {
   return Number.isFinite(n) ? n : fallback;
 }
 
+function parseOrigins(raw: string | undefined): string[] {
+  if (!raw) return ['http://localhost:5173'];
+  return raw.split(',').map((s) => s.trim()).filter(Boolean);
+}
+
 export interface AppEnv {
   port: number;
   nodeEnv: string;
   clientOrigins: string[];
 
-  // Prebaked Developer Token (MVP mode). When set, the server returns this
-  // token verbatim and does not touch the signing path.
   prebakedDeveloperToken?: string;
 
-  // Signing inputs for Developer Token generation.
   teamId?: string;
   keyId?: string;
   privateKeyPath?: string;
   privateKeyInline?: string;
   tokenTtlSeconds: number;
-}
 
-function parseOrigins(raw: string | undefined): string[] {
-  if (!raw) return ['http://localhost:5173'];
-  return raw.split(',').map((s) => s.trim()).filter(Boolean);
+  /** True when running inside a Vercel serverless function. */
+  isVercel: boolean;
 }
 
 export const env: AppEnv = {
@@ -54,4 +56,6 @@ export const env: AppEnv = {
   privateKeyInline: requireString(process.env.APPLE_PRIVATE_KEY),
 
   tokenTtlSeconds: parseNumber(process.env.APPLE_TOKEN_TTL_SECONDS, 15_777_000),
+
+  isVercel: Boolean(process.env.VERCEL || process.env.VERCEL_ENV),
 };

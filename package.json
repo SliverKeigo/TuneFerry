@@ -11,17 +11,23 @@
     "dev": "npm-run-all --parallel dev:server dev:client",
     "dev:server": "npm --workspace server run dev",
     "dev:client": "npm --workspace client run dev",
-    "build": "npm-run-all build:server build:client",
-    "build:server": "npm --workspace server run build",
-    "build:client": "npm --workspace client run build",
-    "start": "npm --workspace server run start",
-    "typecheck": "npm-run-all --parallel typecheck:server typecheck:client",
+    "build": "npm --workspace client run build",
+    "typecheck": "npm-run-all --parallel typecheck:api typecheck:server typecheck:client",
+    "typecheck:api": "tsc -p tsconfig.json --noEmit",
     "typecheck:server": "npm --workspace server run typecheck",
     "typecheck:client": "npm --workspace client run typecheck",
     "clean": "rimraf client/dist server/dist"
   },
+  "dependencies": {
+    "@vercel/node": "^3.2.29",
+    "dotenv": "^16.4.5",
+    "jsonwebtoken": "^9.0.2"
+  },
   "devDependencies": {
+    "@types/jsonwebtoken": "^9.0.6",
+    "@types/node": "^20.11.30",
     "npm-run-all": "^4.1.5",
-    "rimraf": "^5.0.5"
+    "rimraf": "^5.0.5",
+    "typescript": "^5.4.3"
   }
 }

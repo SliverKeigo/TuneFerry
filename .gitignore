@@ -18,6 +18,9 @@ build/
 .vite/
 *.tsbuildinfo
 
+# Vercel
+.vercel/
+
 # Logs
 logs/
 *.log

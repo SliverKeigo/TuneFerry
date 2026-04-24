@@ -1,13 +1,13 @@
 import { Router } from 'express';
-import { getDeveloperToken } from '../services/developerTokenService';
+import { getDeveloperToken } from '../../../lib/developerTokenService';
 import {
   addToLibrary,
   getLibraryPlaylists,
   searchCatalog,
   searchLibrary,
-} from '../services/appleMusicService';
-import { HttpError } from '../utils/httpError';
-import type { LibraryAddResourceType } from '../types/appleMusic';
+} from '../../../lib/appleMusicService';
+import { HttpError } from '../../../lib/httpError';
+import type { LibraryAddResourceType } from '../../../lib/types/appleMusic';
 
 const router: Router = Router();
 
