@@ -1,6 +1,10 @@
 #!/usr/bin/env sh
 # Fail the commit unless Biome (lint + format) AND tsc (typecheck) both pass
 # against the whole repo, not just the staged diff — per project rule.
+#
+# Run sequentially on purpose: lint is fast and fails often; when it catches
+# an issue we skip the slower typecheck. Switching to `npm run validate`
+# (which runs them in parallel) would trade fast-fail for interleaved logs.
 
 set -e
 

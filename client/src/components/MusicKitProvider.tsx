@@ -1,4 +1,4 @@
-import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { type ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
 import { fetchDeveloperToken } from '../api/appleMusicApi';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { MusicKitContext, type MusicKitContextValue } from '../hooks/useMusicKit';
@@ -73,12 +73,13 @@ export default function MusicKitProvider({ children }: { children: ReactNode }) 
   // Later changes must NOT re-run init — storefront swaps force a page reload
   // via setStorefront(); disconnect clears cachedUserToken but must not bounce
   // the user through a new MusicKit.configure().
-  const initialRef = useRef({ userToken: cachedUserToken, storefront });
+  // `useState`'s lazy initializer runs exactly once, unlike `useRef({...})`
+  // which re-evaluates its initial expression on every render.
+  const [initial] = useState(() => ({ userToken: cachedUserToken, storefront }));
 
   // --- Initialise MusicKit once ---
   useEffect(() => {
     let cancelled = false;
-    const { userToken: initialUserToken, storefront: initialStorefront } = initialRef.current;
 
     (async () => {
       try {
@@ -88,12 +89,18 @@ export default function MusicKitProvider({ children }: { children: ReactNode }) 
         ]);
         if (cancelled) return;
 
-        const result = MusicKit.configure({
-          developerToken,
-          app: { name: APP_NAME, build: APP_BUILD },
-          storefrontId: initialStorefront,
-        });
-        const freshInstance = (await result) as MusicKitInstance;
+        // Reuse an already-configured instance if one exists. React StrictMode
+        // intentionally mounts -> unmounts -> remounts every effect in dev, and
+        // Apple's MusicKit.configure() warns when called twice on the same
+        // page. getInstance() lets us short-circuit the second pass.
+        const existing = MusicKit.getInstance?.();
+        const freshInstance =
+          existing ??
+          ((await MusicKit.configure({
+            developerToken,
+            app: { name: APP_NAME, build: APP_BUILD },
+            storefrontId: initial.storefront,
+          })) as MusicKitInstance);
         if (cancelled) return;
 
         setInstance(freshInstance);
@@ -102,9 +109,9 @@ export default function MusicKitProvider({ children }: { children: ReactNode }) 
         // report authorised here; reconcile with anything we had cached.
         const kitAuthorized = freshInstance.isAuthorized;
         const kitToken = freshInstance.musicUserToken || '';
-        setIsAuthorized(kitAuthorized || Boolean(initialUserToken));
-        setMusicUserToken(kitToken || initialUserToken);
-        if (kitToken && kitToken !== initialUserToken) {
+        setIsAuthorized(kitAuthorized || Boolean(initial.userToken));
+        setMusicUserToken(kitToken || initial.userToken);
+        if (kitToken && kitToken !== initial.userToken) {
           setCachedUserToken(kitToken);
         }
         setIsReady(true);
@@ -121,7 +128,7 @@ export default function MusicKitProvider({ children }: { children: ReactNode }) 
     return () => {
       cancelled = true;
     };
-  }, [setCachedUserToken]);
+  }, [initial, setCachedUserToken]);
 
   // --- Listen for auth changes emitted by MusicKit itself ---
   useEffect(() => {
