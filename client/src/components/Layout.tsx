@@ -1,54 +1,57 @@
-import { NavLink, Outlet } from 'react-router-dom';
-import { useMusicKit } from '../hooks/useMusicKit';
-import styles from './Layout.module.css';
+import { useEffect, useState } from 'react';
+import { Outlet, useLocation } from 'react-router-dom';
+import { useTweaks } from '../hooks/useTweaks';
+import MobileNav from './MobileNav';
+import Sidebar from './Sidebar';
+import TopNav from './TopNav';
 
-const NAV = [
-  { to: '/', label: 'Home', end: true },
-  { to: '/search', label: 'Search' },
-  { to: '/library', label: 'Library' },
-  { to: '/organizer', label: 'Organizer' },
-  { to: '/settings', label: 'Settings' },
-];
+const MOBILE_QUERY = '(max-width: 820px)';
 
 export default function Layout() {
-  const { isAuthorized } = useMusicKit();
+  const { tweaks } = useTweaks();
+  const location = useLocation();
+  const [mobile, setMobile] = useState(() =>
+    typeof window !== 'undefined' ? window.matchMedia(MOBILE_QUERY).matches : false,
+  );
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mql = window.matchMedia(MOBILE_QUERY);
+    const onChange = (e: MediaQueryListEvent) => setMobile(e.matches);
+    setMobile(mql.matches);
+    mql.addEventListener('change', onChange);
+    return () => mql.removeEventListener('change', onChange);
+  }, []);
+
+  const isTopnav = tweaks.nav === 'topnav';
 
   return (
-    <div className={styles.shell}>
-      <header className={styles.header}>
-        <div className={styles.headerInner}>
-          <div className={styles.brand}>
-            <span>Apple Music</span> Organizer
+    <>
+      <div className="app-bg" />
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: isTopnav ? 'column' : 'row',
+          minHeight: '100vh',
+          position: 'relative',
+          zIndex: 1,
+        }}
+      >
+        {!mobile && !isTopnav && <Sidebar />}
+        {!mobile && isTopnav && <TopNav />}
+        <main
+          style={{
+            flex: 1,
+            position: 'relative',
+            paddingBottom: mobile ? 72 : 0,
+          }}
+        >
+          <div className="page-enter" key={location.pathname}>
+            <Outlet />
           </div>
-          <nav className={styles.nav}>
-            {NAV.map((item) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                end={item.end}
-                className={({ isActive }) =>
-                  [styles.navLink, isActive ? styles.navLinkActive : ''].join(' ').trim()
-                }
-              >
-                {item.label}
-              </NavLink>
-            ))}
-          </nav>
-          <div className={styles.status} aria-live="polite">
-            <span
-              className={[styles.dot, isAuthorized ? styles.dotConnected : ''].join(' ').trim()}
-              aria-hidden
-            />
-            {isAuthorized ? 'Connected' : 'Not connected'}
-          </div>
-        </div>
-      </header>
-      <main className={styles.main}>
-        <Outlet />
-      </main>
-      <footer className={styles.footer}>
-        Apple Music Library Organizer · MVP · data flows through your own backend
-      </footer>
-    </div>
+        </main>
+        {mobile && <MobileNav />}
+      </div>
+    </>
   );
 }

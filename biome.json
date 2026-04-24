@@ -13,7 +13,8 @@
       "**/.vite",
       "client/index.html",
       "package-lock.json",
-      "docs/**"
+      "docs/**",
+      "ui-design/**"
     ]
   },
   "organizeImports": {
