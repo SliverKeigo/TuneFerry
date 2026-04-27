@@ -1,9 +1,17 @@
+import path from 'node:path';
 import { defineConfig } from 'vitest/config';
 
 // Vitest 2.x — runs against `src/lib/**` and `src/app/api/**` (Node env).
 // Client-side React tests would need a jsdom env + @testing-library; set up
 // a separate config under src/ when that becomes needed.
 export default defineConfig({
+  resolve: {
+    // Mirror tsconfig.json's `@/*` → `./src/*` so Vitest can resolve route
+    // handler imports (`@/lib/...`) the same way Next.js does at build time.
+    alias: {
+      '@': path.resolve(__dirname, 'src'),
+    },
+  },
   test: {
     include: ['src/lib/**/*.test.ts', 'src/app/api/**/*.test.ts'],
     environment: 'node',
