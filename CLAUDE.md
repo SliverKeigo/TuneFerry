@@ -58,15 +58,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Spotify 集成约定
 
-**两种认证流并存**：
-- **Client Credentials**（`getAppToken()`）—— 拉公开 playlist 用。模块内存缓存 token，按 exp 自动刷
-- **Authorization Code**（`buildAuthorizeUrl/exchangeCodeForTokens/refreshUserToken`）—— 拉私有 playlist 用。OAuth state 走 HMAC SHA-256 签名（`signState/verifyState`，密钥来自 `SPOTIFY_STATE_SECRET`）
+**唯一路径：embed 页面爬取**。Spotify Web API 自 2024 年起被 Premium 锁，整套 OAuth 已删。
 
-**Session 存储**：`tf.spotify_session` HttpOnly cookie，30 天有效。`spotifySession.ts` 有 `readSpotifySession/writeSpotifySession/clearSpotifySession` 助手，**只能在 server-side 用**（Next.js 的 `cookies()` from `next/headers`）。
+- `fetchPublicPlaylistViaEmbed(idOrUrl)` 在 `src/lib/spotifyService.ts` —— 唯一对外函数
+- 数据源 = `https://open.spotify.com/embed/playlist/<id>` 的 SSR `__NEXT_DATA__` script
+- 需要带 desktop User-Agent 的 fetch（Spotify 对 non-browser UA 可能 429/403）
+- 走 `props.pageProps.state.data.entity.{name, subtitle, coverArt, trackList}` 的链路；任何 hop 失败抛 `HttpError(404, 'Playlist not found or shape unexpected')`
+- 没有 ISRC、没有 album name —— 只 title + subtitle(artist) + duration + 30s preview
+- **限制**：算法 playlist (`37i9...`) 上限 50 首，用户 playlist 上限约 100 首。私有 playlist 不可访问
+- Risk profile 和 Apple WebPlay-scraped token 一样：非官方、Spotify 改前端就坏。文档要明示
 
-**自动 refresh**：`fetchUserPlaylist*` 等用户 API 会在收到 401 时自动调 `refreshUserToken`，更新 cookie 后重试一次。如果 refresh 也失败 → 抛 `HttpError(401)`，前端引导用户重新 OAuth。
-
-**不要引入 `next-auth`/`iron-session`** —— 自己 30 行实现已经足够。
+**没有 SPOTIFY_* env 变量。`.env` 完全没 Spotify 字段**。如果未来想拉私有 playlist，只能要求用户订阅 Spotify Premium 重新加 OAuth 流（git history `e2c4...` 之前的版本可参考）。
 
 ## Apple Music 约定（已定型，不要改）
 
@@ -82,9 +84,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 `src/lib/matchService.ts` 自实现，**不引第三方 fuzzy 库**（`fuse.js`/`string-similarity` 等都不要）。
 
-- **优先 ISRC**：spotify track 有 isrc → `findByIsrc()` → confidence `'exact'`
-- **fallback fuzzy**：`searchCatalog({ term: name + artist })` → token Jaccard 相似度，duration ±8s 加分，阈值 0.85 高/0.6 低
-- **不要加并发**：MVP 串行，100 首约 3 秒，先这样
+- **只走 fuzzy**：embed 没有 ISRC，没有 album name。`searchCatalog({ term: name + artist })` → token Jaccard 相似度，duration ±8s 加分。
+- 阈值：≥0.85 → `'high'`、≥0.6 → `'low'`、否则 `'none'`。`MatchConfidence` 类型只有这 3 档（之前的 `'exact'` 已删）
+- **不要加并发**：MVP 串行，100 首约 3 秒，够了。如果用户抱怨慢再 `Promise.all` 分批
 
 ## Route handler 约定
 

@@ -1,49 +1,43 @@
-// Lean shapes for the Spotify Web API responses we touch. Full schemas live
-// at https://developer.spotify.com/documentation/web-api — we only model what
-// our services consume so a future API change can't silently widen our types.
+// Lean shapes for Spotify data we extract from the public embed iframe
+// (`https://open.spotify.com/embed/playlist/{id}`). The embed page server-renders
+// its data as JSON inside `<script id="__NEXT_DATA__">`, which is what we
+// parse — no Web API, no OAuth, no Premium required.
+//
+// Trade-off: the embed payload is leaner than the API. We do NOT get ISRCs or
+// album names, so downstream matching is fuzzy-only. Track lists are also
+// capped at the embed's display limit (≤100 for user playlists, ≤50 for some
+// algorithmic ones) — there's nothing we can do about that from this side.
 
 /** Single track normalized for the matcher. */
 export interface SpotifyTrack {
-  /** Spotify track id (base62, 22 chars). */
+  /** Spotify track id (base62, 22 chars). Extracted from `uri`. */
   id: string;
   name: string;
-  /** Artist names in display order. Joined with ", " by callers when needed. */
+  /**
+   * Artist names in display order. The embed gives us a single comma-joined
+   * `subtitle` string; we split on common separators (`, `, ` / `, ` & `) so
+   * downstream code can keep treating artists as a list.
+   */
   artists: string[];
-  album: string;
-  /** External `external_ids.isrc` — the deterministic match key. */
-  isrc?: string;
   durationMs: number;
-  previewUrl?: string;
+  /** Optional 30-sec MP3 preview Spotify ships in the embed payload. */
+  audioPreviewUrl?: string;
   /** Canonical open.spotify.com URL for the track. */
   spotifyUrl: string;
 }
 
-/** A playlist with its full unrolled track list. */
+/** A playlist with its full unrolled track list (capped by the embed). */
 export interface SpotifyPlaylist {
   id: string;
   name: string;
   description: string;
   owner: { id: string; displayName: string };
   imageUrl?: string;
+  /**
+   * Number of tracks we actually got. The embed doesn't tell us the playlist's
+   * real total when it's capped (it only renders the first N), so this is
+   * effectively `tracks.length`. Treat as a lower bound, not an authoritative count.
+   */
   totalTracks: number;
   tracks: SpotifyTrack[];
-}
-
-/** Tokens returned by Spotify's /api/token endpoint, normalized for storage. */
-export interface SpotifyTokens {
-  accessToken: string;
-  /** Only present after the initial Authorization Code exchange (and rare rotations). */
-  refreshToken?: string;
-  /** Absolute expiry as epoch ms — easier to reason about than `expires_in` deltas. */
-  expiresAt: number;
-  /** Space-separated scope string echoed by Spotify. */
-  scope: string;
-}
-
-/** A page of the user's own playlists for the wizard's playlist picker. */
-export interface SpotifyPagedPlaylists {
-  items: { id: string; name: string; totalTracks: number; imageUrl?: string }[];
-  total: number;
-  /** Next-page URL Spotify returns, or `null` when we've reached the end. */
-  next: string | null;
 }

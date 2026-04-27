@@ -1,457 +1,166 @@
 'use client';
 
 import * as Icon from '@/components/icons';
-import {
-  Artwork,
-  Button,
-  PageHeader,
-  Pill,
-  SectionHeader,
-  Spinner,
-  artworkHueFromId,
-  useToast,
-} from '@/components/primitives';
-import type { SpotifyPagedPlaylists, SpotifyPlaylist } from '@/lib/types/spotify';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { useCallback, useEffect, useState } from 'react';
+import { Button, PageHeader, Pill, Spinner, useToast } from '@/components/primitives';
+import type { SpotifyPlaylist } from '@/lib/types/spotify';
+import { useRouter } from 'next/navigation';
+import { type FormEvent, useCallback, useState } from 'react';
 
 interface ApiErrorBody {
-  error?: { message?: string };
+  error?: { message?: string; status?: number };
 }
 
-const PAGE_SIZE = 20;
+interface FetchError {
+  message: string;
+  status: number;
+}
 
 export default function ImportPage() {
   const router = useRouter();
-  const params = useSearchParams();
   const toast = useToast();
 
-  // ── Banner state from query param ─────────────────────────────────────────
-  const spotifyParam = params.get('spotify');
-  const errorParam = params.get('error');
-  const [banner, setBanner] = useState<{ tone: 'ok' | 'err'; text: string } | null>(null);
+  const [input, setInput] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<FetchError | null>(null);
 
-  useEffect(() => {
-    if (spotifyParam === 'connected') {
-      setBanner({ tone: 'ok', text: 'Connected to Spotify' });
-      const t = setTimeout(() => setBanner(null), 4000);
-      return () => clearTimeout(t);
-    }
-    if (spotifyParam === 'error') {
-      setBanner({ tone: 'err', text: errorParam ?? 'Spotify sign-in failed.' });
-      return;
-    }
-    return;
-  }, [spotifyParam, errorParam]);
+  const onSubmit = useCallback(
+    async (e: FormEvent<HTMLFormElement>) => {
+      e.preventDefault();
+      const trimmed = input.trim();
+      if (!trimmed || loading) return;
 
-  // ── Path A: public URL ────────────────────────────────────────────────────
-  const [urlInput, setUrlInput] = useState('');
-  const [fetchingPublic, setFetchingPublic] = useState(false);
-  const [publicError, setPublicError] = useState<string | null>(null);
-
-  const fetchPublic = useCallback(async () => {
-    const trimmed = urlInput.trim();
-    if (!trimmed) {
-      setPublicError('Paste a Spotify playlist URL or ID first.');
-      return;
-    }
-    setPublicError(null);
-    setFetchingPublic(true);
-    try {
-      const res = await fetch(`/api/spotify/playlist?url=${encodeURIComponent(trimmed)}`);
-      if (!res.ok) {
-        const body = (await res.json().catch(() => null)) as ApiErrorBody | null;
-        throw new Error(body?.error?.message ?? `Request failed (${res.status})`);
-      }
-      const playlist = (await res.json()) as SpotifyPlaylist;
-      sessionStorage.setItem(`tf.staged.${playlist.id}`, JSON.stringify(playlist));
-      router.push(`/match?spotify_id=${encodeURIComponent(playlist.id)}&public=1`);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Failed to fetch playlist.';
-      setPublicError(msg);
-      toast({ message: msg, tone: 'err' });
-    } finally {
-      setFetchingPublic(false);
-    }
-  }, [urlInput, router, toast]);
-
-  // ── Path B: connected account ─────────────────────────────────────────────
-  type ConnState = 'unknown' | 'connected' | 'disconnected';
-  const [conn, setConn] = useState<ConnState>('unknown');
-  const [page, setPage] = useState<SpotifyPagedPlaylists | null>(null);
-  const [offset, setOffset] = useState(0);
-  const [loadingList, setLoadingList] = useState(false);
-  const [listError, setListError] = useState<string | null>(null);
-  const [pickingId, setPickingId] = useState<string | null>(null);
-
-  // Connection probe.
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
+      setLoading(true);
+      setError(null);
       try {
-        const res = await fetch('/api/spotify/me/playlists?limit=1');
-        if (cancelled) return;
-        if (res.status === 401) {
-          setConn('disconnected');
-          return;
-        }
-        if (!res.ok) {
-          setConn('disconnected');
-          return;
-        }
-        setConn('connected');
-      } catch {
-        if (!cancelled) setConn('disconnected');
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  // Load a page once we know we're connected (or when offset changes).
-  useEffect(() => {
-    if (conn !== 'connected') return;
-    let cancelled = false;
-    (async () => {
-      setLoadingList(true);
-      setListError(null);
-      try {
-        const res = await fetch(`/api/spotify/me/playlists?limit=${PAGE_SIZE}&offset=${offset}`);
+        const res = await fetch(`/api/spotify/playlist?url=${encodeURIComponent(trimmed)}`);
         if (!res.ok) {
           const body = (await res.json().catch(() => null)) as ApiErrorBody | null;
-          throw new Error(body?.error?.message ?? `Request failed (${res.status})`);
-        }
-        const data = (await res.json()) as SpotifyPagedPlaylists;
-        if (!cancelled) setPage(data);
-      } catch (err) {
-        if (!cancelled) setListError(err instanceof Error ? err.message : 'Failed to load.');
-      } finally {
-        if (!cancelled) setLoadingList(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [conn, offset]);
-
-  const pickPrivate = useCallback(
-    async (id: string) => {
-      setPickingId(id);
-      try {
-        const res = await fetch(`/api/spotify/me/playlist?id=${encodeURIComponent(id)}`);
-        if (!res.ok) {
-          const body = (await res.json().catch(() => null)) as ApiErrorBody | null;
-          throw new Error(body?.error?.message ?? `Request failed (${res.status})`);
+          const status = body?.error?.status ?? res.status;
+          const message = body?.error?.message ?? `Request failed (${res.status})`;
+          throw Object.assign(new Error(message), { status });
         }
         const playlist = (await res.json()) as SpotifyPlaylist;
         sessionStorage.setItem(`tf.staged.${playlist.id}`, JSON.stringify(playlist));
-        router.push(`/match?spotify_id=${encodeURIComponent(playlist.id)}&private=1`);
+        toast({
+          message: `Loaded "${playlist.name}" — ${playlist.totalTracks} tracks.`,
+          tone: 'ok',
+        });
+        router.push(`/match?spotify_id=${encodeURIComponent(playlist.id)}`);
       } catch (err) {
-        const msg = err instanceof Error ? err.message : 'Failed to fetch playlist.';
-        toast({ message: msg, tone: 'err' });
-        setPickingId(null);
+        const status =
+          typeof (err as { status?: unknown }).status === 'number'
+            ? ((err as { status: number }).status as number)
+            : 0;
+        const message = err instanceof Error ? err.message : 'Failed to fetch playlist.';
+        setError({ message, status });
+      } finally {
+        setLoading(false);
       }
     },
-    [router, toast],
+    [input, loading, router, toast],
   );
 
-  const signOut = useCallback(async () => {
-    try {
-      await fetch('/api/spotify/auth/logout', { method: 'POST' });
-    } catch {
-      /* ignore — we'll reload anyway */
-    }
-    window.location.reload();
-  }, []);
-
-  const total = page?.total ?? 0;
-  const pageStart = total === 0 ? 0 : offset + 1;
-  const pageEnd = Math.min(offset + PAGE_SIZE, total);
-  const hasPrev = offset > 0;
-  const hasNext = page ? offset + PAGE_SIZE < total : false;
+  const errorHint = error
+    ? error.status === 404
+      ? 'Playlist not found or private — make sure the link is publicly accessible.'
+      : error.status === 502
+        ? 'Spotify changed their embed page — please try again, or report this.'
+        : error.message
+    : null;
 
   return (
-    <main style={{ padding: '32px 32px 64px', maxWidth: 1080, margin: '0 auto' }}>
+    <main style={{ padding: '32px 32px 80px', maxWidth: 720, margin: '0 auto' }}>
+      <div style={{ marginBottom: 16 }}>
+        <Pill tone="warn">
+          <Icon.Alert size={12} /> Public playlists only. Set the playlist to public on Spotify
+          first if needed.
+        </Pill>
+      </div>
+
       <PageHeader
         eyebrow="Step 1 of 3"
         title="Import a Spotify playlist"
-        desc="Pick how you want to get the source. Public URLs need no sign-in; for your own private playlists, connect Spotify."
+        desc="Paste a public Spotify playlist URL and we'll pull the tracks. No sign-in required."
       />
 
-      {banner && (
-        <div style={{ marginBottom: 20 }}>
-          {banner.tone === 'ok' ? (
-            <Pill tone="ok" style={{ padding: '8px 12px', fontSize: 12.5 }}>
-              <Icon.Check size={13} /> {banner.text}
-            </Pill>
-          ) : (
-            <div
-              className="panel"
-              style={{
-                padding: '12px 14px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 10,
-                color: 'var(--err)',
-                borderColor: 'oklch(0.72 0.19 25 / 0.4)',
-              }}
-            >
-              <Icon.Alert size={16} /> <span style={{ fontSize: 13 }}>{banner.text}</span>
-            </div>
+      <form onSubmit={onSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <input
+          className="input-native"
+          type="text"
+          placeholder="https://open.spotify.com/playlist/... or playlist ID"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          disabled={loading}
+          spellCheck={false}
+          autoComplete="off"
+          aria-label="Spotify playlist URL or ID"
+        />
+
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <Button
+            type="submit"
+            variant="primary"
+            disabled={loading || input.trim().length === 0}
+            icon={loading ? <Spinner size={14} /> : undefined}
+            iconRight={!loading ? <Icon.Arrow size={14} /> : undefined}
+          >
+            {loading ? 'Fetching…' : 'Fetch playlist'}
+          </Button>
+          {loading && (
+            <span style={{ fontSize: 12.5, color: 'var(--text-3)' }}>
+              Scraping the public embed page…
+            </span>
           )}
+        </div>
+      </form>
+
+      {error && errorHint && (
+        <div
+          className="panel"
+          role="alert"
+          style={{
+            marginTop: 16,
+            padding: '12px 14px',
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: 10,
+            color: 'var(--err)',
+            borderColor: 'oklch(0.72 0.19 25 / 0.4)',
+            background: 'oklch(0.72 0.19 25 / 0.08)',
+          }}
+        >
+          <Icon.Alert size={16} style={{ flexShrink: 0, marginTop: 1 }} />
+          <div style={{ fontSize: 13, lineHeight: 1.5 }}>{errorHint}</div>
         </div>
       )}
 
-      <section
+      <div
+        className="panel"
         style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-          gap: 20,
-          alignItems: 'flex-start',
+          marginTop: 24,
+          padding: '14px 16px',
+          fontSize: 13,
+          color: 'var(--text-2)',
+          lineHeight: 1.6,
         }}
       >
-        {/* Path A */}
-        <div className="panel" style={{ padding: 22 }}>
-          <SectionHeader
-            title={
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-                <Icon.Link size={15} /> Public playlist URL
-              </span>
-            }
-            desc="No sign-in required — works for any public Spotify playlist."
-          />
-          <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
-            <input
-              className="input-native"
-              placeholder="https://open.spotify.com/playlist/... or playlist id"
-              value={urlInput}
-              onChange={(e) => setUrlInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !fetchingPublic) fetchPublic();
-              }}
-            />
-            <Button
-              variant="primary"
-              onClick={fetchPublic}
-              disabled={fetchingPublic}
-              icon={fetchingPublic ? <Spinner size={14} /> : <Icon.Arrow size={14} />}
-            >
-              {fetchingPublic ? 'Fetching' : 'Fetch playlist'}
-            </Button>
-          </div>
-          {publicError && (
-            <p style={{ margin: '10px 0 0', fontSize: 12.5, color: 'var(--err)' }}>{publicError}</p>
-          )}
-        </div>
-
-        {/* Path B */}
-        <div className="panel" style={{ padding: 22 }}>
-          <SectionHeader
-            title={
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-                <Icon.User size={15} /> Your Spotify
-              </span>
-            }
-            desc={
-              conn === 'connected'
-                ? 'Browse and pick from your own playlists.'
-                : 'Sign in to migrate private and collaborative playlists.'
-            }
-            right={
-              conn === 'connected' && (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  icon={<Icon.Unlink size={13} />}
-                  onClick={signOut}
-                >
-                  Sign out
-                </Button>
-              )
-            }
-          />
-
-          {conn === 'unknown' && (
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 10,
-                color: 'var(--text-3)',
-                fontSize: 13,
-                padding: '20px 0',
-              }}
-            >
-              <Spinner /> Checking session…
-            </div>
-          )}
-
-          {conn === 'disconnected' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 4 }}>
-              <Button
-                variant="primary"
-                icon={<Icon.Link size={14} />}
-                onClick={() => {
-                  window.location.href = '/api/spotify/auth/login';
-                }}
-              >
-                Sign in with Spotify
-              </Button>
-              <p style={{ margin: 0, fontSize: 12, color: 'var(--text-4)', lineHeight: 1.5 }}>
-                We use a HttpOnly session cookie. We never store your password.
-              </p>
-            </div>
-          )}
-
-          {conn === 'connected' && (
-            <div style={{ marginTop: 4 }}>
-              {loadingList && !page && (
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 10,
-                    color: 'var(--text-3)',
-                    fontSize: 13,
-                    padding: '12px 0',
-                  }}
-                >
-                  <Spinner /> Loading your playlists…
-                </div>
-              )}
-              {listError && (
-                <p style={{ margin: '4px 0 10px', fontSize: 12.5, color: 'var(--err)' }}>
-                  {listError}
-                </p>
-              )}
-              {page && (
-                <>
-                  <ul
-                    style={{
-                      listStyle: 'none',
-                      padding: 0,
-                      margin: 0,
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: 4,
-                      maxHeight: 360,
-                      overflowY: 'auto',
-                    }}
-                  >
-                    {page.items.length === 0 && (
-                      <li
-                        style={{
-                          padding: 16,
-                          fontSize: 13,
-                          color: 'var(--text-3)',
-                          textAlign: 'center',
-                        }}
-                      >
-                        No playlists found on this page.
-                      </li>
-                    )}
-                    {page.items.map((p) => {
-                      const picking = pickingId === p.id;
-                      return (
-                        <li key={p.id}>
-                          <button
-                            type="button"
-                            onClick={() => pickPrivate(p.id)}
-                            disabled={pickingId !== null}
-                            style={{
-                              width: '100%',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: 12,
-                              padding: '8px 10px',
-                              borderRadius: 10,
-                              background: picking ? 'var(--elev)' : 'transparent',
-                              border: '1px solid transparent',
-                              textAlign: 'left',
-                              transition: 'background var(--dur) var(--ease)',
-                              opacity: pickingId !== null && !picking ? 0.55 : 1,
-                            }}
-                            onMouseEnter={(e) => {
-                              if (pickingId === null)
-                                e.currentTarget.style.background = 'var(--elev)';
-                            }}
-                            onMouseLeave={(e) => {
-                              if (!picking) e.currentTarget.style.background = 'transparent';
-                            }}
-                          >
-                            <Artwork
-                              size={40}
-                              radius={6}
-                              kind="playlist"
-                              hue={artworkHueFromId(p.id)}
-                              imgSrc={p.imageUrl}
-                            />
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                              <div
-                                style={{
-                                  fontSize: 13,
-                                  fontWeight: 500,
-                                  whiteSpace: 'nowrap',
-                                  overflow: 'hidden',
-                                  textOverflow: 'ellipsis',
-                                }}
-                              >
-                                {p.name}
-                              </div>
-                              <div style={{ fontSize: 11.5, color: 'var(--text-4)' }}>
-                                {p.totalTracks} tracks
-                              </div>
-                            </div>
-                            {picking ? (
-                              <Spinner size={14} />
-                            ) : (
-                              <Icon.Chevron size={14} style={{ color: 'var(--text-4)' }} />
-                            )}
-                          </button>
-                        </li>
-                      );
-                    })}
-                  </ul>
-
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      marginTop: 12,
-                      paddingTop: 12,
-                      borderTop: '1px solid var(--hairline)',
-                    }}
-                  >
-                    <span style={{ fontSize: 11.5, color: 'var(--text-4)' }}>
-                      {total === 0 ? '0' : `${pageStart}–${pageEnd}`} of {total}
-                    </span>
-                    <div style={{ display: 'flex', gap: 6 }}>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        disabled={!hasPrev || loadingList}
-                        onClick={() => setOffset((o) => Math.max(0, o - PAGE_SIZE))}
-                      >
-                        Prev
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        disabled={!hasNext || loadingList}
-                        onClick={() => setOffset((o) => o + PAGE_SIZE)}
-                      >
-                        Next
-                      </Button>
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
-          )}
-        </div>
-      </section>
+        <ul
+          style={{ margin: 0, paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 6 }}
+        >
+          <li>
+            Paste any public Spotify playlist URL — works for both{' '}
+            <code style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: 'var(--text-3)' }}>
+              https://open.spotify.com/playlist/&lt;id&gt;?si=…
+            </code>{' '}
+            and bare IDs.
+          </li>
+          <li>
+            Up to <strong>100 tracks</strong> per playlist (Spotify embed limit). Spotify's
+            algorithmic playlists like "Today's Top Hits" cap at 50.
+          </li>
+          <li>No sign-in. We never see your Spotify account.</li>
+        </ul>
+      </div>
     </main>
   );
 }

@@ -1,8 +1,8 @@
-// File: /Users/keigo/Projects/AM-API/src/app/api/apple-music/catalog/search/route.ts
-import * as entry from '../../../../../../../src/app/api/apple-music/catalog/search/route.js'
+// File: /Users/keigo/Projects/AM-API/src/app/api/spotify/playlist/route.ts
+import * as entry from '../../../../../../src/app/api/spotify/playlist/route.js'
 import type { NextRequest } from 'next/server.js'
 
-type TEntry = typeof import('../../../../../../../src/app/api/apple-music/catalog/search/route.js')
+type TEntry = typeof import('../../../../../../src/app/api/spotify/playlist/route.js')
 
 // Check that the entry is a valid entry
 checkFields<Diff<{

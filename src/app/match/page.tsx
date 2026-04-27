@@ -35,7 +35,6 @@ interface RowState {
 }
 
 const CONFIDENCE_TONE: Record<MatchConfidence, PillTone> = {
-  exact: 'ok',
   high: 'ok',
   low: 'warn',
   none: 'err',
@@ -117,7 +116,7 @@ export default function MatchPage() {
 
   // Counts for header / sticky bar.
   const counts = useMemo(() => {
-    const c = { exact: 0, high: 0, low: 0, none: 0, included: 0 };
+    const c = { high: 0, low: 0, none: 0, included: 0 };
     for (const r of rows) {
       c[r.result.confidence]++;
       if (r.included && r.chosen !== null) c.included++;
@@ -176,7 +175,7 @@ export default function MatchPage() {
         desc={`${playlist.totalTracks} tracks · by ${playlist.owner.displayName}`}
         right={
           <div style={{ display: 'flex', gap: 6 }}>
-            <Pill tone="ok">{counts.exact + counts.high} matched</Pill>
+            <Pill tone="ok">{counts.high} matched</Pill>
             <Pill tone="warn">{counts.low} low</Pill>
             <Pill tone="err">{counts.none} none</Pill>
           </div>
@@ -260,8 +259,7 @@ export default function MatchPage() {
       >
         <div style={{ fontSize: 13, color: 'var(--text-2)' }}>
           <strong style={{ color: 'var(--text)', fontWeight: 600 }}>{counts.included}</strong>{' '}
-          tracks included · {counts.exact + counts.high + counts.low} matched of{' '}
-          {playlist.tracks.length}
+          tracks included · {counts.high + counts.low} matched of {playlist.tracks.length}
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <Link href="/import" style={{ display: 'inline-flex' }}>
@@ -346,9 +344,9 @@ function MatchRow({
               overflow: 'hidden',
               textOverflow: 'ellipsis',
             }}
-            title={`${sp.artists.join(', ')} — ${sp.album}`}
+            title={sp.artists.join(', ')}
           >
-            {sp.artists.join(', ')} · {sp.album}
+            {sp.artists.join(', ')}
           </div>
         </div>
       </div>

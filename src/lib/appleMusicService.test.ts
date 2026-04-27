@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { findByIsrc, searchCatalog } from './appleMusicService';
+import { searchCatalog } from './appleMusicService';
 
 // Apple's servers reject requests missing `Origin` when the Developer Token's
 // `root_https_origin` claim is set (the case for WebPlay-scraped tokens). If
@@ -38,17 +38,5 @@ describe('appleMusicService headers', () => {
     const ua = lastCallHeaders().get('user-agent');
     expect(ua).toBeTruthy();
     expect(ua).toMatch(/Mozilla\/5\.0/);
-  });
-
-  it('findByIsrc inherits Origin + User-Agent (uses appleFetch wrapper)', async () => {
-    fetchMock.mockResolvedValue(new Response('{"data":[]}', { status: 200 }));
-    await findByIsrc({ isrc: 'USRC17607839', storefront: 'us' });
-    const h = lastCallHeaders();
-    expect(h.get('origin')).toBe('https://music.apple.com');
-    expect(h.get('user-agent')).toMatch(/Mozilla\/5\.0/);
-
-    const url = String(fetchMock.mock.calls.at(-1)?.[0]);
-    expect(url).toContain('/catalog/us/songs');
-    expect(url).toContain('filter%5Bisrc%5D=USRC17607839');
   });
 });

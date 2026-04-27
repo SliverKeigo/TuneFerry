@@ -6,6 +6,12 @@ import type {
   AppleMusicSongAttributes,
 } from './types/appleMusic';
 
+// Note: `findByIsrc` used to live here. It was only ever called by the
+// deterministic ISRC branch of `matchService.matchOne`, which is gone now
+// that we read Spotify playlists via the embed scrape (which strips ISRCs).
+// The `filter[isrc]` endpoint still exists on Apple's side; bring the helper
+// back if a future data source surfaces ISRCs again.
+
 // `amp-api.music.apple.com` is the endpoint Apple's own Web player hits; it's
 // the one paired with WebPlay Developer Tokens. The official public
 // `api.music.apple.com` currently accepts these tokens too but is not
@@ -93,39 +99,8 @@ export async function searchCatalog(params: {
 }
 
 /**
- * Apple Music catalog "filter by ISRC" lookup. Endpoint:
- *   GET /v1/catalog/{storefront}/songs?filter[isrc]={isrc}
- *
- * ISRC is the international standard recording code burned into Spotify's
- * `external_ids.isrc`; when present it gives us a deterministic match between
- * a Spotify track and an Apple Music song with no fuzzy guesswork.
- *
- * Returns every matching song (multiple regional releases may share an ISRC).
- * Callers typically take the first result.
- */
-export async function findByIsrc(params: {
-  isrc: string;
-  storefront?: string;
-}): Promise<AppleMusicResource<AppleMusicSongAttributes>[]> {
-  const storefront = params.storefront?.trim() || 'us';
-  // `filter[isrc]` is the documented parameter name. URLSearchParams handles
-  // the bracket encoding correctly here (unlike the `ids[type]` quirk that
-  // forced addToLibrary to build the string by hand).
-  const response = await appleFetch<{ data?: AppleMusicResource<AppleMusicSongAttributes>[] }>(
-    `/catalog/${storefront}/songs`,
-    {
-      query: {
-        'filter[isrc]': params.isrc,
-      },
-    },
-  );
-  return response.data ?? [];
-}
-
-/**
- * Convenience wrapper around `searchCatalog` that returns only the first song
- * hit. Used by the match service when ISRC lookup misses and we fall back to
- * a fuzzy text query.
+ * Convenience wrapper around `searchCatalog` that returns only the song-type
+ * hits. Used by the match service for the (now sole) fuzzy text path.
  */
 export async function findFirstByQuery(params: {
   query: string;

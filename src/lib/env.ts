@@ -36,15 +36,8 @@ export interface AppEnv {
   privateKeyInline?: string;
   tokenTtlSeconds: number;
 
-  // Spotify Web API + OAuth (Authorization Code flow).
-  // - clientId / clientSecret: app credentials from the Spotify dashboard.
-  // - redirectUri: must match an entry in the Spotify app's allowlist.
-  // - stateSecret: HMAC key for signing the OAuth `state` cookie. Any random
-  //   high-entropy string; only the server ever sees it.
-  spotifyClientId?: string;
-  spotifyClientSecret?: string;
-  spotifyRedirectUri?: string;
-  spotifyStateSecret?: string;
+  // Spotify needs no env vars: we scrape its public embed page rather than
+  // calling the Web API. See `spotifyService.ts` for the rationale.
 
   /** True when running inside a Vercel serverless function. */
   isVercel: boolean;
@@ -61,11 +54,6 @@ export const env: AppEnv = {
   privateKeyInline: readString(process.env.APPLE_PRIVATE_KEY),
 
   tokenTtlSeconds: parseNumber(process.env.APPLE_TOKEN_TTL_SECONDS, 15_777_000),
-
-  spotifyClientId: readString(process.env.SPOTIFY_CLIENT_ID),
-  spotifyClientSecret: readString(process.env.SPOTIFY_CLIENT_SECRET),
-  spotifyRedirectUri: readString(process.env.SPOTIFY_REDIRECT_URI),
-  spotifyStateSecret: readString(process.env.SPOTIFY_STATE_SECRET),
 
   isVercel,
 };

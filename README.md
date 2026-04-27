@@ -2,35 +2,35 @@
 
 **English** · [简体中文](./README.zh-CN.md)
 
-Migrate Spotify playlists to Apple Music. Paste a public playlist URL — or sign in to Spotify to bring private ones — and TuneFerry matches every track against the Apple Music catalog (ISRC-first, with a fuzzy fallback) and hands you a tappable deep-link list plus an `.m3u8` file.
+Migrate **public** Spotify playlists to Apple Music. Paste any `open.spotify.com/playlist/...` URL and TuneFerry fuzzy-matches every track against the Apple Music catalog, then hands you a tappable deep-link list plus an `.m3u8` file.
 
-> **Why?** Apple Music's API doesn't let third-party apps add tracks to a user's library programmatically without an Apple Developer Program subscription. TuneFerry sidesteps that: it surfaces Apple Music song deep links you tap on iOS / macOS — Apple's own client adds them.
+> **Zero subscriptions, zero API keys.** TuneFerry reads Spotify by scraping the public embed page (the same data Spotify shows to anyone visiting your playlist URL — no Premium, no OAuth, no client secret). It reads Apple Music with a WebPlay-scraped Developer Token. Apple's "add to library" still happens on your own device — TuneFerry generates the deep links, you tap.
 
 ## How it works
 
 ```
-Spotify playlist URL or your account
+Public Spotify playlist URL
         │
         ▼
-   [/import]  ←─ paste URL or pick from "your playlists" after Spotify OAuth
+   [/import]   ←─ paste URL, fetch via open.spotify.com/embed/<id>
         │
         ▼
-   POST /api/match  →  ISRC lookup → fuzzy artist+title fallback
+   POST /api/match   ←─ fuzzy match (token Jaccard + duration penalty)
         │
         ▼
-   [/match]  ←─ confidence pills, manual override picker, include/exclude
+   [/match]    ←─ confidence pills, manual candidate picker
         │
         ▼
-   [/export]  ←─ deep link list (copy all) + .m3u8 download
+   [/export]   ←─ deep link list (copy all) + .m3u8 download
 ```
 
 ## Tech Stack
 
 - **Framework:** Next.js 14 (App Router) + React 18 + TypeScript. Single-process `next dev` on :3000.
 - **Styling:** OKLCH CSS-variable token system + inline styles + a small `primitives.tsx` component library. No UI framework, no CSS Modules.
-- **Spotify:** Both Client Credentials (public playlists) and Authorization Code (private playlists) flows. OAuth state via signed HMAC, session via HttpOnly cookies. No `next-auth`, no `iron-session`.
-- **Apple Music:** Catalog search via `amp-api.music.apple.com` with a WebPlay-scraped Developer Token. ISRC + fuzzy matching written from scratch (token Jaccard + duration penalty). No `fuse.js`/`string-similarity` — ~30 lines of code.
-- **Quality:** Biome (lint + format + import sort), TypeScript strict, Vitest (37 tests), husky pre-commit hook.
+- **Spotify:** Embed-page scraping (`https://open.spotify.com/embed/playlist/<id>`). Pulls the SSR'd `__NEXT_DATA__` JSON, walks to the track list. **No OAuth, no API keys, no env vars.**
+- **Apple Music:** Catalog search via `amp-api.music.apple.com` with a WebPlay-scraped Developer Token. Fuzzy matching written from scratch (token Jaccard + duration penalty). No `fuse.js` / `string-similarity` — ~30 lines.
+- **Quality:** Biome (lint + format + import sort), TypeScript strict, Vitest (34 tests), husky pre-commit hook.
 
 ## Project Layout
 
@@ -79,22 +79,16 @@ AM-API/
 
 ## Configuration
 
-### 1. Spotify (required)
+### Spotify
 
-Register an app at <https://developer.spotify.com/dashboard>:
+**Nothing.** No env vars, no app registration, no OAuth setup. TuneFerry reads public playlist data from `https://open.spotify.com/embed/playlist/<id>`. The embed page returns server-rendered JSON for any visitor — Spotify uses it for `oembed` previews, third-party readers can use it too.
 
-1. Create an app, name it whatever
-2. Add Redirect URI exactly: `http://localhost:3000/api/spotify/auth/callback` (and your prod URL)
-3. Copy Client ID + Client Secret
+**Limitations**:
+- **Public playlists only.** Set the playlist to public on Spotify first if needed.
+- **Up to 100 tracks per playlist.** Embed truncates beyond that. Spotify-curated algorithmic playlists (`37i9...` IDs like *Today's Top Hits*, *Top 50*) cap at 50.
+- **No "your playlists" picker.** Each migration starts from a URL paste.
 
-```bash
-SPOTIFY_CLIENT_ID=...
-SPOTIFY_CLIENT_SECRET=...
-SPOTIFY_REDIRECT_URI=http://localhost:3000/api/spotify/auth/callback
-SPOTIFY_STATE_SECRET=$(openssl rand -base64 32)
-```
-
-### 2. Apple Music Developer Token (required)
+### Apple Music Developer Token (required)
 
 **Two paths:**
 
@@ -119,11 +113,16 @@ npm install
 
 # 2. Configure
 cp .env.example .env
-# Fill SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET, SPOTIFY_STATE_SECRET, APPLE_MUSIC_DEVELOPER_TOKEN
+# Fill APPLE_MUSIC_DEVELOPER_TOKEN (only required field).
+# Optionally set NEXT_PUBLIC_DEFAULT_STOREFRONT (default 'us').
 
 # 3. Run
 npm run dev
 # → http://localhost:3000
+
+# 4. Try it
+# Open /import, paste any public Spotify playlist URL, e.g.
+#   https://open.spotify.com/playlist/2mZkGiUygMLEzNnawpo0Ya
 ```
 
 > **Local HTTP proxy gotcha:** if your shell has `http_proxy`/`https_proxy` set (Clash, Surge, etc.), `curl localhost:3000` may 503 because the proxy intercepts. Use `curl --noproxy '*' http://localhost:3000/...` or `unset http_proxy https_proxy`.
@@ -168,17 +167,20 @@ npm run clean          # rm .next + coverage
 - [x] Phase 1–14 — Apple Music Library Organizer prototype (see git history)
 - [x] Phase 15 — WebPlay-scraped Developer Token + amp-api endpoint
 - [x] Phase 16 — Rebuilt on Next.js 14 App Router
-- [x] Phase 17 — **Pivot to TuneFerry**: drop user-library code, add Spotify Web API integration (CC + OAuth flows), build ISRC + fuzzy match service, ship the Import → Match → Export wizard
-- [ ] Next — Persist migration history (Supabase / Vercel Postgres) so users can resume
+- [x] Phase 17 — Pivot to TuneFerry: Spotify Web API + OAuth + ISRC matching wizard (subsequently rebuilt — see Phase 18)
+- [x] Phase 18 — **Drop Spotify Web API entirely** (Premium-locked since 2024). Replaced with embed-page scraping for public playlists. Removed all OAuth, removed ISRC tier, simplified `/import` and `/settings`. Net −1500 / +400 lines, zero subscriptions
+- [ ] Next — Per-storefront retry for tracks that miss in `us` (auto-fallback to `hk`/`tw`/`jp`)
 - [ ] Next — Concurrency in `matchMany` for large playlists (currently serial)
-- [ ] Next — Surface Spotify display name (needs new `/api/spotify/me` route)
-- [ ] Next — iOS Shortcut export (one-tap add)
+- [ ] Next — iOS Shortcut export (one-tap add via Shortcuts app)
 - [ ] Next — Client-side React component tests (jsdom + @testing-library/react)
+- [ ] Next — Persist migration history (so users can resume across sessions)
 
 ## Known Limitations (MVP)
 
-- Apple Music has no public "add to library" API for non-subscribers; the deep link path is the only universal flow. iOS users tap each link; macOS Music app can also import the `.m3u8`.
-- WebPlay-scraped tokens are unofficial. Apple can break them by changing the front-end bundle name, the JWT claim shape, or tightening Origin enforcement. Production users should consider Apple Developer Program.
-- Spotify private playlist access requires the user's OAuth login each session (token refresh is automatic for 30 days; after that, sign in again).
-- `matchMany` is serial — fine for ≤100 tracks; ~3s typical. Add concurrency if you migrate large playlists often.
-- Local HTTP proxies can intercept `curl localhost:3000` — see above.
+- **Public playlists only, ≤100 tracks.** Spotify's embed page is the data source; private playlists require Web API access (Premium-locked) and embed truncates large playlists.
+- **No ISRC = fuzzy-only matching.** Embed doesn't expose ISRC, so we can't do exact-by-identifier matches. Most popular tracks still resolve at `'high'` confidence; obscure / regional / heavily-renamed tracks may end up `'low'` or `'none'`. Users can manually pick from candidate lists in `/match`.
+- **Storefront sensitivity.** Match rate depends heavily on whether the track exists in the chosen Apple Music storefront. Chinese songs frequently miss in `us` but hit in `hk` / `tw`. Consider switching storefront in Settings before retrying.
+- **Apple Music has no public "add to library" API for non-subscribers**; the deep link path is the only universal flow. iOS users tap each link; macOS Music app can also import the `.m3u8`.
+- **WebPlay-scraped tokens (both Apple & Spotify embed) are unofficial.** Either side can break the path by changing their front-end bundle. Production users should consider paid alternatives.
+- **`matchMany` is serial** — fine for ≤100 tracks; ~3s typical. Add concurrency if it ever feels slow.
+- **Local HTTP proxies** (Clash, Surge etc.) can intercept `curl localhost:3000` — use `--noproxy '*'` or `unset http_proxy https_proxy`.

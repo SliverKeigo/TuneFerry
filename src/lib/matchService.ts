@@ -1,4 +1,4 @@
-import { findByIsrc, findFirstByQuery } from './appleMusicService';
+import { findFirstByQuery } from './appleMusicService';
 import type { AppleMusicResource, AppleMusicSongAttributes } from './types/appleMusic';
 import type { SpotifyTrack } from './types/spotify';
 
@@ -6,7 +6,10 @@ import type { SpotifyTrack } from './types/spotify';
 // Public types
 // ---------------------------------------------------------------------------
 
-export type MatchConfidence = 'exact' | 'high' | 'low' | 'none';
+// Without ISRCs (the embed scrape strips them) every match is fuzzy. The
+// `'high'` tier replaces the old `'exact'` tier; we never hit a deterministic
+// identifier match anymore.
+export type MatchConfidence = 'high' | 'low' | 'none';
 
 export interface MatchInput {
   spotify: SpotifyTrack;
@@ -32,7 +35,7 @@ export interface MatchResult {
   confidence: MatchConfidence;
   /** Top alternatives for manual override in the UI. Always <= 5. */
   candidates: AppleSongLite[];
-  /** Why we picked (or didn't): 'isrc', 'fuzzy', 'no-results', etc. */
+  /** Why we picked (or didn't): 'fuzzy', 'no-results', 'low-score'. */
   reason?: string;
 }
 
@@ -40,15 +43,14 @@ export interface MatchResult {
 // Tunable thresholds
 // ---------------------------------------------------------------------------
 
-// Score thresholds: tuned conservatively. ISRC hits skip these entirely.
+// Score thresholds:
 //   >= HIGH_THRESHOLD → 'high'  (auto-pick safely)
 //   >= LOW_THRESHOLD  → 'low'   (still surface, but flag for review)
 //   <  LOW_THRESHOLD  → 'none'  (don't pick anything)
 const HIGH_THRESHOLD = 0.85;
 const LOW_THRESHOLD = 0.6;
 
-// Punish duration mismatches. Spotify and Apple ISRCs sometimes differ on a
-// re-recorded version that's 30s shorter — we want that to fail high-confidence.
+// Punish duration mismatches. Catches re-recorded versions, radio edits, etc.
 const DURATION_TOLERANCE_MS = 8_000;
 const DURATION_PENALTY = 0.7;
 
@@ -167,36 +169,13 @@ function toAppleSongLite(
 /**
  * Match a single Spotify track against the Apple Music catalog.
  *
- * Strategy:
- *  1. If `spotify.isrc` is present, query Apple by ISRC. Any hit is 'exact'.
- *  2. Else fall back to a fuzzy text search ranked by `score()` and the
- *     duration-aware threshold ladder above.
+ * Strategy: fuzzy text search ranked by `score()` and the duration-aware
+ * threshold ladder above. The embed-scraped Spotify payload has no ISRC, so
+ * this is the only path — the old deterministic ISRC branch is gone.
  */
 export async function matchOne(input: MatchInput): Promise<MatchResult> {
   const { spotify, storefront } = input;
 
-  // ── Path 1: deterministic ISRC lookup ────────────────────────────────────
-  if (spotify.isrc) {
-    const songs = await findByIsrc({ isrc: spotify.isrc, storefront });
-    if (songs.length > 0) {
-      const lites = songs
-        .map((r) => toAppleSongLite(r, storefront))
-        .filter((s): s is AppleSongLite => s !== null);
-      if (lites.length > 0) {
-        const [first, ...rest] = lites;
-        return {
-          spotify,
-          apple: first ?? null,
-          confidence: 'exact',
-          candidates: rest.slice(0, MAX_CANDIDATES),
-          reason: 'isrc',
-        };
-      }
-    }
-    // ISRC miss falls through to fuzzy.
-  }
-
-  // ── Path 2: fuzzy text search ────────────────────────────────────────────
   const primaryArtist = spotify.artists[0] ?? '';
   const term = `${spotify.name} ${primaryArtist}`.trim();
   const songs = await findFirstByQuery({ query: term, storefront, limit: SEARCH_LIMIT });

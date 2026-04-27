@@ -1,7 +1,5 @@
 {
-  "/api/apple-music/developer-token/route": "app/api/apple-music/developer-token/route.js",
-  "/page": "app/page.js",
-  "/api/apple-music/catalog/search/route": "app/api/apple-music/catalog/search/route.js",
+  "/api/spotify/playlist/route": "app/api/spotify/playlist/route.js",
   "/import/page": "app/import/page.js",
-  "/api/spotify/auth/login/route": "app/api/spotify/auth/login/route.js"
+  "/api/match/route": "app/api/match/route.js"
 }

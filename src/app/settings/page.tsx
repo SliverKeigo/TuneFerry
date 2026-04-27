@@ -1,6 +1,5 @@
 'use client';
 
-import { fetchDeveloperToken } from '@/api/appleMusicApi';
 import TweaksPanel from '@/components/TweaksPanel';
 import * as Icon from '@/components/icons';
 import {
@@ -9,285 +8,161 @@ import {
   Pill,
   SectionHeader,
   Spinner,
-  StatusDot,
   useToast,
 } from '@/components/primitives';
 import { useStorefront } from '@/hooks/useStorefront';
-import { useCallback, useEffect, useState } from 'react';
+import { type FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 
-const PRESET_STOREFRONTS: { code: string; label: string }[] = [
-  { code: 'us', label: 'United States' },
-  { code: 'gb', label: 'United Kingdom' },
-  { code: 'jp', label: 'Japan' },
-  { code: 'hk', label: 'Hong Kong' },
-  { code: 'tw', label: 'Taiwan' },
-  { code: 'de', label: 'Germany' },
-  { code: 'fr', label: 'France' },
-  { code: 'au', label: 'Australia' },
+interface ApiErrorBody {
+  error?: { message?: string };
+}
+
+interface JwtPayload {
+  iss?: string;
+  iat?: number;
+  exp?: number;
+  [k: string]: unknown;
+}
+
+interface TokenState {
+  token: string;
+  payload: JwtPayload;
+}
+
+const PRESETS: { value: string; label: string }[] = [
+  { value: 'us', label: 'US' },
+  { value: 'gb', label: 'UK' },
+  { value: 'jp', label: 'Japan' },
+  { value: 'hk', label: 'Hong Kong' },
+  { value: 'tw', label: 'Taiwan' },
 ];
 
 export default function SettingsPage() {
   return (
-    <main style={{ padding: '32px 32px 64px', maxWidth: 980, margin: '0 auto' }}>
+    <main style={{ padding: '32px 32px 80px', maxWidth: 880, margin: '0 auto' }}>
       <PageHeader
-        eyebrow="Settings"
-        title="Preferences"
-        desc="Visual tweaks, your Apple Music storefront, and connected services."
+        title="Settings"
+        desc="Storefront, appearance, and the Apple Music developer token."
       />
 
-      <div style={{ display: 'grid', gap: 24 }}>
-        <Section title="Appearance" desc="Theme, surface, navigation layout, and accent colour.">
-          <TweaksPanel />
-        </Section>
-
-        <Section
-          title="Storefront"
-          desc="Region used when querying the Apple Music catalog. Wrong region = bad matches."
-        >
-          <StorefrontSection />
-        </Section>
-
-        <Section
-          title="Spotify session"
-          desc="Sign in to migrate your private playlists. Public-URL imports work without this."
-        >
-          <SpotifySession />
-        </Section>
-
-        <Section
-          title="Apple Music developer token"
-          desc="Public token used to call music.apple.com. We scrape WebPlay because Apple doesn't issue developer tokens to non-paying members."
-        >
-          <DeveloperTokenSection />
-        </Section>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+        <StorefrontSection />
+        <AppearanceSection />
+        <AppleTokenSection />
       </div>
     </main>
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-
-function Section({
-  title,
-  desc,
-  children,
-}: {
-  title: string;
-  desc?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className="panel" style={{ padding: 22 }}>
-      <SectionHeader title={title} desc={desc} />
-      {children}
-    </section>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
+// ─── Storefront ─────────────────────────────────────────────────────────────
 
 function StorefrontSection() {
   const [storefront, setStorefront] = useStorefront();
   const [custom, setCustom] = useState('');
 
-  const onSubmitCustom = () => {
-    const code = custom.trim().toLowerCase();
-    if (code.length === 2 || code.length === 3) {
-      setStorefront(code);
-      setCustom('');
-    }
-  };
+  const onCustomSubmit = useCallback(
+    (e: FormEvent<HTMLFormElement>) => {
+      e.preventDefault();
+      const v = custom.trim().toLowerCase();
+      if (/^[a-z]{2}$/.test(v)) {
+        setStorefront(v);
+        setCustom('');
+      }
+    },
+    [custom, setStorefront],
+  );
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-        {PRESET_STOREFRONTS.map((s) => {
-          const active = storefront === s.code;
+    <section className="panel" style={{ padding: 18 }}>
+      <SectionHeader
+        title="Apple Music storefront"
+        desc="Two-letter region code used when searching the Apple Music catalog."
+        right={<Pill tone="accent">Active: {storefront.toUpperCase()}</Pill>}
+      />
+
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+        {PRESETS.map((p) => {
+          const active = storefront === p.value;
           return (
-            <button
-              key={s.code}
-              type="button"
-              onClick={() => setStorefront(s.code)}
-              style={{
-                padding: '6px 10px',
-                borderRadius: 8,
-                fontSize: 12,
-                fontFamily: active ? 'inherit' : 'inherit',
-                color: active ? 'var(--accent-fg)' : 'var(--text-2)',
-                background: active ? 'var(--accent)' : 'var(--elev)',
-                border: active ? '1px solid var(--accent-ring)' : '1px solid var(--hairline)',
-                fontWeight: active ? 600 : 500,
-              }}
-              title={s.label}
+            <Button
+              key={p.value}
+              size="sm"
+              variant={active ? 'primary' : 'secondary'}
+              onClick={() => setStorefront(p.value)}
             >
-              {s.code.toUpperCase()}
-            </button>
+              {p.label} ({p.value})
+            </Button>
           );
         })}
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+      <form onSubmit={onCustomSubmit} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
         <input
           className="input-native"
-          placeholder="Custom code (e.g. mx)"
+          type="text"
+          maxLength={2}
+          placeholder="Custom (e.g. de)"
           value={custom}
           onChange={(e) => setCustom(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') onSubmitCustom();
-          }}
-          style={{ maxWidth: 240 }}
+          spellCheck={false}
+          autoComplete="off"
+          aria-label="Custom storefront code"
+          style={{ width: 160 }}
         />
-        <Button size="md" variant="secondary" onClick={onSubmitCustom}>
+        <Button
+          type="submit"
+          size="sm"
+          variant="secondary"
+          disabled={!/^[a-z]{2}$/i.test(custom.trim())}
+        >
           Set
         </Button>
-        <span style={{ fontSize: 12, color: 'var(--text-4)' }}>
-          Active: <code style={{ fontFamily: 'var(--font-mono)' }}>{storefront}</code>
-        </span>
-      </div>
-    </div>
+      </form>
+    </section>
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// ─── Appearance ─────────────────────────────────────────────────────────────
 
-interface SpotifyMeShape {
-  // /api/spotify/me/playlists doesn't return user info, so "displayName" we
-  // derive from the first playlist owner won't always match. Instead, we
-  // probe and only show "Connected" — the username is best surfaced after
-  // signing in via the import flow.
-  total: number;
-}
-
-function SpotifySession() {
-  const toast = useToast();
-  const [state, setState] = useState<'unknown' | 'connected' | 'disconnected'>('unknown');
-  const [busy, setBusy] = useState(false);
-
-  const probe = useCallback(async () => {
-    setState('unknown');
-    try {
-      const res = await fetch('/api/spotify/me/playlists?limit=1');
-      if (res.status === 401) {
-        setState('disconnected');
-        return;
-      }
-      if (!res.ok) {
-        setState('disconnected');
-        return;
-      }
-      // Force a parse so weird HTML responses don't sneak through.
-      (await res.json()) as SpotifyMeShape;
-      setState('connected');
-    } catch {
-      setState('disconnected');
-    }
-  }, []);
-
-  useEffect(() => {
-    probe();
-  }, [probe]);
-
-  const onSignIn = () => {
-    window.location.href = '/api/spotify/auth/login';
-  };
-
-  const onSignOut = async () => {
-    setBusy(true);
-    try {
-      const res = await fetch('/api/spotify/auth/logout', { method: 'POST' });
-      if (!res.ok && res.status !== 204) {
-        throw new Error(`Logout failed (${res.status})`);
-      }
-      toast({ message: 'Signed out of Spotify.', tone: 'ok' });
-      setState('disconnected');
-    } catch (err) {
-      toast({
-        message: err instanceof Error ? err.message : 'Sign-out failed.',
-        tone: 'err',
-      });
-    } finally {
-      setBusy(false);
-    }
-  };
-
+function AppearanceSection() {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-      <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-        {state === 'unknown' && <Spinner />}
-        {state !== 'unknown' && <StatusDot status={state === 'connected' ? 'ok' : 'warn'} />}
-        <span style={{ fontSize: 13, color: 'var(--text-2)' }}>
-          {state === 'unknown' && 'Checking…'}
-          {state === 'connected' && 'Connected to Spotify'}
-          {state === 'disconnected' && 'Not connected'}
-        </span>
-      </div>
-      <div style={{ flex: 1 }} />
-      {state === 'connected' ? (
-        <Button
-          size="md"
-          variant="secondary"
-          icon={<Icon.Unlink size={14} />}
-          onClick={onSignOut}
-          disabled={busy}
-        >
-          Sign out
-        </Button>
-      ) : (
-        <Button
-          size="md"
-          variant="primary"
-          icon={<Icon.Link size={14} />}
-          onClick={onSignIn}
-          disabled={state === 'unknown'}
-        >
-          Sign in with Spotify
-        </Button>
-      )}
-    </div>
+    <section className="panel" style={{ padding: 18 }}>
+      <SectionHeader title="Appearance" desc="Theme, surface, navigation, and accent." />
+      <TweaksPanel />
+    </section>
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// ─── Apple Music token ──────────────────────────────────────────────────────
 
-interface JwtPayload {
-  exp?: number;
-  iat?: number;
-  iss?: string;
-}
-
-function decodeJwtExp(token: string): { exp?: Date; raw?: JwtPayload; error?: string } {
-  const parts = token.split('.');
-  if (parts.length !== 3 || !parts[1]) return { error: 'Token is not a JWT.' };
-  try {
-    // base64url → base64.
-    const b64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
-    const padded = b64 + '='.repeat((4 - (b64.length % 4)) % 4);
-    const json = atob(padded);
-    const payload = JSON.parse(json) as JwtPayload;
-    return {
-      exp: payload.exp ? new Date(payload.exp * 1000) : undefined,
-      raw: payload,
-    };
-  } catch (err) {
-    return { error: err instanceof Error ? err.message : 'Decode failed' };
-  }
-}
-
-function DeveloperTokenSection() {
+function AppleTokenSection() {
   const toast = useToast();
-  const [token, setToken] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [state, setState] = useState<TokenState | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      setLoading(true);
       try {
-        const t = await fetchDeveloperToken();
-        if (!cancelled) setToken(t);
+        const res = await fetch('/api/apple-music/developer-token');
+        if (!res.ok) {
+          const body = (await res.json().catch(() => null)) as ApiErrorBody | null;
+          throw new Error(body?.error?.message ?? `Token fetch failed (${res.status})`);
+        }
+        const { developerToken } = (await res.json()) as { developerToken: string };
+        const payloadPart = developerToken.split('.')[1];
+        if (!payloadPart) throw new Error('Token shape invalid (missing payload).');
+        // Standard JWT payloads are URL-safe base64. atob accepts standard base64;
+        // swap chars and pad before decoding.
+        const b64 = payloadPart.replace(/-/g, '+').replace(/_/g, '/');
+        const padded = b64 + '='.repeat((4 - (b64.length % 4)) % 4);
+        const payload = JSON.parse(atob(padded)) as JwtPayload;
+        if (!cancelled) setState({ token: developerToken, payload });
       } catch (err) {
-        if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to fetch token.');
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : 'Failed to load token.');
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -297,77 +172,136 @@ function DeveloperTokenSection() {
     };
   }, []);
 
-  const onCopy = async () => {
-    if (!token) return;
-    try {
-      await navigator.clipboard.writeText(token);
-      toast({ message: 'Token copied to clipboard.', tone: 'ok' });
-    } catch {
-      toast({ message: 'Clipboard unavailable.', tone: 'err' });
-    }
-  };
+  const expiry = useMemo(() => {
+    if (!state?.payload.exp) return null;
+    const ms = state.payload.exp * 1000;
+    const date = new Date(ms);
+    const diffMs = ms - Date.now();
+    const expired = diffMs <= 0;
+    const absHours = Math.abs(diffMs) / 36e5;
+    const human =
+      absHours < 1
+        ? `${Math.round(Math.abs(diffMs) / 60_000)} min`
+        : absHours < 48
+          ? `${Math.round(absHours)} h`
+          : `${Math.round(absHours / 24)} d`;
+    return {
+      iso: date.toISOString(),
+      local: date.toLocaleString(),
+      relative: expired ? `expired ${human} ago` : `in ${human}`,
+      expired,
+    };
+  }, [state]);
 
-  const decoded = token ? decodeJwtExp(token) : null;
+  const onCopy = useCallback(async () => {
+    if (!state) return;
+    try {
+      await navigator.clipboard.writeText(state.token);
+      toast({ message: 'Token copied.', tone: 'ok' });
+    } catch {
+      toast({ message: 'Clipboard unavailable in this browser.', tone: 'err' });
+    }
+  }, [state, toast]);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+    <section className="panel" style={{ padding: 18 }}>
+      <SectionHeader
+        title={
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+            <Icon.Disc size={15} /> Apple Music developer token
+          </span>
+        }
+        desc="JWT used to call Apple's catalog. Loaded server-side from environment configuration."
+        right={state ? <Pill tone="accent">WebPlay scraped</Pill> : null}
+      />
+
       {loading && (
         <div
-          style={{ display: 'inline-flex', alignItems: 'center', gap: 8, color: 'var(--text-3)' }}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 10,
+            color: 'var(--text-3)',
+            fontSize: 13,
+          }}
         >
-          <Spinner /> Fetching…
+          <Spinner /> Loading token…
         </div>
       )}
-      {error && (
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, color: 'var(--err)' }}>
-          <Icon.Alert size={14} /> {error}
+
+      {error && !loading && (
+        <div
+          className="panel"
+          role="alert"
+          style={{
+            padding: '10px 12px',
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: 10,
+            color: 'var(--err)',
+            borderColor: 'oklch(0.72 0.19 25 / 0.4)',
+            background: 'oklch(0.72 0.19 25 / 0.08)',
+            fontSize: 13,
+          }}
+        >
+          <Icon.Alert size={16} style={{ flexShrink: 0, marginTop: 1 }} />
+          <span>{error}</span>
         </div>
       )}
-      {token && (
-        <>
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 12,
-              flexWrap: 'wrap',
-              fontSize: 12.5,
-              color: 'var(--text-2)',
-            }}
-          >
+
+      {state && !loading && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <Row label="Source">
             <Pill tone="accent">WebPlay scraped</Pill>
-            {decoded?.exp && (
-              <span>
-                Expires <strong>{decoded.exp.toLocaleString()}</strong>
+          </Row>
+          {expiry && (
+            <Row label="Expires">
+              <span style={{ fontSize: 13, color: 'var(--text-2)' }}>
+                {expiry.local} <span style={{ color: 'var(--text-4)' }}>({expiry.relative})</span>
               </span>
-            )}
-            {decoded?.error && (
-              <span style={{ color: 'var(--err)' }}>JWT decode: {decoded.error}</span>
-            )}
-            <div style={{ flex: 1 }} />
+              {expiry.expired && (
+                <Pill tone="err" style={{ marginLeft: 8 }}>
+                  Expired
+                </Pill>
+              )}
+            </Row>
+          )}
+          {state.payload.iss && (
+            <Row label="Issuer (team)">
+              <code
+                style={{
+                  fontSize: 12,
+                  fontFamily: 'var(--font-mono)',
+                  color: 'var(--text-3)',
+                }}
+              >
+                {state.payload.iss}
+              </code>
+            </Row>
+          )}
+          <Row label="Token">
             <Button size="sm" variant="secondary" icon={<Icon.Copy size={13} />} onClick={onCopy}>
-              Copy
+              Copy token
             </Button>
-          </div>
-          <code
-            style={{
-              fontFamily: 'var(--font-mono)',
-              fontSize: 10.5,
-              color: 'var(--text-4)',
-              padding: 10,
-              background: 'var(--elev)',
-              border: '1px solid var(--hairline)',
-              borderRadius: 6,
-              wordBreak: 'break-all',
-              maxHeight: 96,
-              overflow: 'auto',
-              display: 'block',
-            }}
-          >
-            {token}
-          </code>
-        </>
+          </Row>
+        </div>
       )}
+    </section>
+  );
+}
+
+function Row({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: '140px 1fr',
+        alignItems: 'center',
+        gap: 16,
+      }}
+    >
+      <span style={{ fontSize: 12.5, color: 'var(--text-3)', fontWeight: 500 }}>{label}</span>
+      <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>{children}</div>
     </div>
   );
 }

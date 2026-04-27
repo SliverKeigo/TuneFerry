@@ -13,10 +13,8 @@ function spotifyFixture(overrides: Partial<SpotifyTrack> = {}): SpotifyTrack {
     id: '6rqhFgbbKwnb9MLmUQDhG6',
     name: 'Hey Jude',
     artists: ['The Beatles'],
-    album: 'Hey Jude',
-    isrc: 'GBAYE6800001',
     durationMs: 425_000,
-    previewUrl: undefined,
+    audioPreviewUrl: undefined,
     spotifyUrl: 'https://open.spotify.com/track/6rqhFgbbKwnb9MLmUQDhG6',
     ...overrides,
   };
@@ -151,25 +149,7 @@ describe('matchOne', () => {
     });
   }
 
-  it('ISRC hit → confidence "exact"', async () => {
-    fetchMock.mockResolvedValueOnce(
-      jsonResponse({
-        data: [appleSongResource({ id: '1', name: 'Hey Jude', artistName: 'The Beatles' })],
-      }),
-    );
-
-    const result = await matchOne({ spotify: spotifyFixture(), storefront: 'us' });
-    expect(result.confidence).toBe('exact');
-    expect(result.reason).toBe('isrc');
-    expect(result.apple?.id).toBe('1');
-    // Only one ISRC call should fire — no fuzzy fallback.
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    const url = String(fetchMock.mock.calls[0]?.[0]);
-    expect(url).toContain('/catalog/us/songs');
-    expect(url).toContain('filter%5Bisrc%5D=GBAYE6800001');
-  });
-
-  it('high-confidence fuzzy hit when ISRC absent', async () => {
+  it('high-confidence fuzzy hit', async () => {
     fetchMock.mockResolvedValueOnce(
       jsonResponse({
         results: {
@@ -188,13 +168,14 @@ describe('matchOne', () => {
       }),
     );
 
-    const result = await matchOne({
-      spotify: spotifyFixture({ isrc: undefined }),
-      storefront: 'us',
-    });
+    const result = await matchOne({ spotify: spotifyFixture(), storefront: 'us' });
     expect(result.confidence).toBe('high');
     expect(result.reason).toBe('fuzzy');
     expect(result.apple?.id).toBe('42');
+    // Exactly one fuzzy search call — there's no ISRC pre-flight anymore.
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const url = String(fetchMock.mock.calls[0]?.[0]);
+    expect(url).toContain('/catalog/us/search');
   });
 
   it('low-confidence when artist is partly off (e.g. cover band)', async () => {
@@ -215,10 +196,7 @@ describe('matchOne', () => {
       }),
     );
 
-    const result = await matchOne({
-      spotify: spotifyFixture({ isrc: undefined }),
-      storefront: 'us',
-    });
+    const result = await matchOne({ spotify: spotifyFixture(), storefront: 'us' });
     // Tokens: spotify=[hey,jude,the,beatles] vs apple=[hey,jude,the,beatles,cover]
     // intersection=4, union=5 → 0.8 → 'low' (>= 0.6, < 0.85).
     expect(result.confidence).toBe('low');
@@ -226,14 +204,12 @@ describe('matchOne', () => {
   });
 
   it('no results from Apple → confidence "none"', async () => {
-    // ISRC search misses, then fuzzy search misses too.
-    fetchMock.mockResolvedValueOnce(jsonResponse({ data: [] }));
     fetchMock.mockResolvedValueOnce(jsonResponse({ results: { songs: { data: [] } } }));
 
     const result = await matchOne({ spotify: spotifyFixture(), storefront: 'us' });
     expect(result.confidence).toBe('none');
     expect(result.apple).toBeNull();
     expect(result.reason).toBe('no-results');
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });
