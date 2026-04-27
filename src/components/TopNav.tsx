@@ -1,11 +1,9 @@
 'use client';
 
-import { useMusicKit } from '@/hooks/useMusicKit';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import type { CSSProperties } from 'react';
 import * as Icon from './icons';
-import { ConnectionBadge } from './primitives';
 
 interface NavItem {
   to: string;
@@ -15,16 +13,13 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { to: '/', end: true, label: 'Home' },
-  { to: '/dashboard', label: 'Dashboard' },
-  { to: '/search', label: 'Search' },
-  { to: '/library', label: 'Library' },
-  { to: '/organizer', label: 'Organizer' },
+  { to: '/import', label: 'Import' },
+  { to: '/match', label: 'Match' },
+  { to: '/export', label: 'Export' },
   { to: '/settings', label: 'Settings' },
 ];
 
 export default function TopNav() {
-  const { isAuthorized } = useMusicKit();
-  const router = useRouter();
   const pathname = usePathname();
 
   const isActive = (href: string, end?: boolean) => {
@@ -52,7 +47,7 @@ export default function TopNav() {
         <span style={{ color: 'var(--accent)', display: 'inline-flex' }}>
           <Icon.Logo size={22} />
         </span>
-        <span style={{ fontSize: 13, fontWeight: 600, letterSpacing: -0.2 }}>Apple Music</span>
+        <span style={{ fontSize: 13, fontWeight: 600, letterSpacing: -0.2 }}>TuneFerry</span>
       </div>
       <nav style={{ display: 'flex', gap: 2 }}>
         {NAV_ITEMS.map((item) => {
@@ -65,7 +60,6 @@ export default function TopNav() {
         })}
       </nav>
       <div style={{ flex: 1 }} />
-      <ConnectionBadge compact connected={isAuthorized} onClick={() => router.push('/')} />
     </header>
   );
 }

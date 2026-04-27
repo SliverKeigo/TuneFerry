@@ -14,9 +14,9 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { to: '/', end: true, label: 'Home', icon: <Icon.Home size={18} /> },
-  { to: '/search', label: 'Search', icon: <Icon.Search size={18} /> },
-  { to: '/library', label: 'Library', icon: <Icon.Library size={18} /> },
-  { to: '/organizer', label: 'Tidy', icon: <Icon.Wand size={18} /> },
+  { to: '/import', label: 'Import', icon: <Icon.Filter size={18} /> },
+  { to: '/match', label: 'Match', icon: <Icon.Wand size={18} /> },
+  { to: '/export', label: 'Export', icon: <Icon.Arrow size={18} /> },
   { to: '/settings', label: 'Set.', icon: <Icon.Gear size={18} /> },
 ];
 

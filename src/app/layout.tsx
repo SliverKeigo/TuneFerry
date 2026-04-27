@@ -1,13 +1,12 @@
 import Providers from '@/components/Providers';
 import type { Metadata } from 'next';
-import Script from 'next/script';
 import type { ReactNode } from 'react';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Apple Music Library Organizer',
+  title: 'TuneFerry — Spotify → Apple Music',
   description:
-    'Connect your Apple Music account, search the catalog & your library, and add tracks with one click.',
+    'Migrate Spotify playlists to Apple Music. Paste a public playlist URL or sign in to Spotify, match against the Apple Music catalog, and export deep-link / .m3u8 lists.',
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
@@ -22,12 +21,6 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         />
       </head>
       <body>
-        {/* MusicKit JS v3 from Apple's CDN; beforeInteractive so `musickitloaded`
-            fires before React mounts the provider that listens for it. */}
-        <Script
-          src="https://js-cdn.music.apple.com/musickit/v3/musickit.js"
-          strategy="beforeInteractive"
-        />
         <div className="app-bg" aria-hidden />
         <Providers>{children}</Providers>
       </body>

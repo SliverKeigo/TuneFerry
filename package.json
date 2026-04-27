@@ -1,8 +1,8 @@
 {
-  "name": "apple-music-library-organizer",
+  "name": "tuneferry",
   "version": "0.1.0",
   "private": true,
-  "description": "Web app to connect Apple Music, search the catalog & your library, and organize it. Single Next.js app deployed on Vercel.",
+  "description": "TuneFerry — migrate Spotify playlists to Apple Music. Match by ISRC + artist/title fuzzy, export deep links and .m3u8.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

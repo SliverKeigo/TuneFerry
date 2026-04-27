@@ -1,11 +1,9 @@
 'use client';
 
-import { useMusicKit } from '@/hooks/useMusicKit';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { CSSProperties, ReactNode } from 'react';
 import * as Icon from './icons';
-import { Button, StatusDot } from './primitives';
 
 interface NavItem {
   to: string;
@@ -16,15 +14,13 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { to: '/', end: true, label: 'Home', icon: <Icon.Home size={16} /> },
-  { to: '/dashboard', label: 'Dashboard', icon: <Icon.Grid size={16} /> },
-  { to: '/search', label: 'Search', icon: <Icon.Search size={16} /> },
-  { to: '/library', label: 'Library', icon: <Icon.Library size={16} /> },
-  { to: '/organizer', label: 'Organizer', icon: <Icon.Wand size={16} /> },
+  { to: '/import', label: 'Import', icon: <Icon.Filter size={16} /> },
+  { to: '/match', label: 'Match', icon: <Icon.Wand size={16} /> },
+  { to: '/export', label: 'Export', icon: <Icon.Arrow size={16} /> },
   { to: '/settings', label: 'Settings', icon: <Icon.Gear size={16} /> },
 ];
 
 export default function Sidebar() {
-  const { isAuthorized, authorize } = useMusicKit();
   const pathname = usePathname();
 
   const isActive = (href: string, end?: boolean) => {
@@ -63,7 +59,7 @@ export default function Sidebar() {
           <Icon.Logo size={24} />
         </span>
         <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <span style={{ fontSize: 13, fontWeight: 600, letterSpacing: -0.2 }}>Apple Music</span>
+          <span style={{ fontSize: 13, fontWeight: 600, letterSpacing: -0.2 }}>TuneFerry</span>
           <span
             style={{
               fontSize: 10.5,
@@ -71,7 +67,7 @@ export default function Sidebar() {
               fontFamily: 'var(--font-mono)',
             }}
           >
-            Organizer · beta
+            Spotify → Apple Music · beta
           </span>
         </div>
       </div>
@@ -110,45 +106,6 @@ export default function Sidebar() {
       </nav>
 
       <div style={{ flex: 1 }} />
-
-      {/* Connection status block */}
-      <div
-        className="panel"
-        style={{
-          padding: 12,
-          borderRadius: 12,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 10,
-          background: isAuthorized ? 'oklch(0.82 0.17 145 / 0.06)' : 'var(--elev)',
-          borderColor: isAuthorized ? 'oklch(0.82 0.17 145 / 0.25)' : 'var(--hairline)',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <StatusDot status={isAuthorized ? 'ok' : 'warn'} size={7} />
-          <span style={{ fontSize: 12, fontWeight: 600 }}>
-            {isAuthorized ? 'Connected' : 'Not connected'}
-          </span>
-        </div>
-        <div style={{ fontSize: 11.5, color: 'var(--text-3)', lineHeight: 1.45 }}>
-          {isAuthorized
-            ? 'Listening on your Apple Music account.'
-            : 'Connect your account to start organizing.'}
-        </div>
-        {!isAuthorized && (
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={() => {
-              void authorize();
-            }}
-            icon={<Icon.Link size={13} />}
-            style={{ width: '100%' }}
-          >
-            Connect
-          </Button>
-        )}
-      </div>
     </aside>
   );
 }

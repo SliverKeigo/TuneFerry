@@ -55,17 +55,6 @@ export interface AppleMusicPlaylistAttributes {
   url?: string;
 }
 
-export interface LibraryPlaylistAttributes {
-  name: string;
-  artwork?: AppleMusicArtwork;
-  description?: { short?: string; standard?: string };
-  canEdit?: boolean;
-  hasCatalog?: boolean;
-  dateAdded?: string;
-}
-
-export type LibraryPlaylist = AppleMusicResource<LibraryPlaylistAttributes>;
-
 export type CatalogSearchResultType = 'songs' | 'albums' | 'artists' | 'playlists' | 'music-videos';
 
 export interface AppleMusicSearchResponse {
@@ -80,24 +69,6 @@ export interface AppleMusicSearchResponse {
     >
   >;
 }
-
-export interface AppleMusicLibrarySearchResponse {
-  results: Record<
-    string,
-    {
-      href?: string;
-      next?: string;
-      data: AppleMusicResource[];
-    }
-  >;
-}
-
-export interface AppleMusicLibraryPlaylistsResponse {
-  data: LibraryPlaylist[];
-  next?: string;
-}
-
-export type LibraryAddResourceType = 'songs' | 'albums' | 'playlists' | 'music-videos';
 
 export interface ApiErrorShape {
   error: {

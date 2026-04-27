@@ -1,10 +1,9 @@
 import { getDeveloperToken } from './developerTokenService';
 import { HttpError } from './httpError';
 import type {
-  AppleMusicLibraryPlaylistsResponse,
-  AppleMusicLibrarySearchResponse,
+  AppleMusicResource,
   AppleMusicSearchResponse,
-  LibraryAddResourceType,
+  AppleMusicSongAttributes,
 } from './types/appleMusic';
 
 // `amp-api.music.apple.com` is the endpoint Apple's own Web player hits; it's
@@ -76,16 +75,6 @@ async function appleFetch<T>(path: string, opts: RequestOptions = {}): Promise<T
   return JSON.parse(text) as T;
 }
 
-function requireMusicUserToken(token: string | undefined): string {
-  if (!token) {
-    throw new HttpError(
-      401,
-      'Missing Music User Token. Connect Apple Music in the client and send the token via the `x-music-user-token` header.',
-    );
-  }
-  return token;
-}
-
 export async function searchCatalog(params: {
   term: string;
   storefront?: string;
@@ -103,96 +92,54 @@ export async function searchCatalog(params: {
   });
 }
 
-export async function searchLibrary(params: {
-  term: string;
-  types?: string;
-  limit?: number;
-  musicUserToken: string | undefined;
-}): Promise<AppleMusicLibrarySearchResponse> {
-  const userToken = requireMusicUserToken(params.musicUserToken);
-  const types =
-    params.types?.trim() || 'library-songs,library-albums,library-artists,library-playlists';
-  return appleFetch<AppleMusicLibrarySearchResponse>('/me/library/search', {
-    query: {
-      term: params.term,
-      types,
-      limit: params.limit ?? 25,
+/**
+ * Apple Music catalog "filter by ISRC" lookup. Endpoint:
+ *   GET /v1/catalog/{storefront}/songs?filter[isrc]={isrc}
+ *
+ * ISRC is the international standard recording code burned into Spotify's
+ * `external_ids.isrc`; when present it gives us a deterministic match between
+ * a Spotify track and an Apple Music song with no fuzzy guesswork.
+ *
+ * Returns every matching song (multiple regional releases may share an ISRC).
+ * Callers typically take the first result.
+ */
+export async function findByIsrc(params: {
+  isrc: string;
+  storefront?: string;
+}): Promise<AppleMusicResource<AppleMusicSongAttributes>[]> {
+  const storefront = params.storefront?.trim() || 'us';
+  // `filter[isrc]` is the documented parameter name. URLSearchParams handles
+  // the bracket encoding correctly here (unlike the `ids[type]` quirk that
+  // forced addToLibrary to build the string by hand).
+  const response = await appleFetch<{ data?: AppleMusicResource<AppleMusicSongAttributes>[] }>(
+    `/catalog/${storefront}/songs`,
+    {
+      query: {
+        'filter[isrc]': params.isrc,
+      },
     },
-    musicUserToken: userToken,
-  });
-}
-
-export async function addToLibrary(params: {
-  type: LibraryAddResourceType;
-  ids: string[];
-  musicUserToken: string | undefined;
-}): Promise<void> {
-  const userToken = requireMusicUserToken(params.musicUserToken);
-
-  // Apple wants `?ids[<type>]=a,b` with brackets percent-encoded. URLSearchParams
-  // would double-encode the bracket key, so we build the querystring by hand.
-  // Each id is encoded independently so commas/special chars inside an id stay intact.
-  const query = `ids%5B${encodeURIComponent(params.type)}%5D=${params.ids
-    .map((id) => encodeURIComponent(id))
-    .join(',')}`;
-
-  const developerToken = getDeveloperToken();
-  const response = await fetch(`${APPLE_MUSIC_API_BASE}/me/library?${query}`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${developerToken}`,
-      'Music-User-Token': userToken,
-      Accept: 'application/json',
-      Origin: BROWSER_ORIGIN,
-      'User-Agent': BROWSER_USER_AGENT,
-    },
-  });
-
-  await throwOnHttpError(response, 'Failed to add to library');
-}
-
-export async function getLibraryPlaylists(params: {
-  musicUserToken: string | undefined;
-  limit?: number;
-  offset?: number;
-}): Promise<AppleMusicLibraryPlaylistsResponse> {
-  const userToken = requireMusicUserToken(params.musicUserToken);
-  return appleFetch<AppleMusicLibraryPlaylistsResponse>('/me/library/playlists', {
-    query: {
-      limit: params.limit ?? 100,
-      offset: params.offset,
-    },
-    musicUserToken: userToken,
-  });
+  );
+  return response.data ?? [];
 }
 
 /**
- * POST /v1/me/library/playlists — pre-declared extension point. Not wired to
- * a route yet; Organizer features will consume this.
+ * Convenience wrapper around `searchCatalog` that returns only the first song
+ * hit. Used by the match service when ISRC lookup misses and we fall back to
+ * a fuzzy text query.
  */
-export async function createLibraryPlaylist(params: {
-  name: string;
-  description?: string;
-  trackIds?: string[];
-  musicUserToken: string | undefined;
-}): Promise<unknown> {
-  const userToken = requireMusicUserToken(params.musicUserToken);
-  const body: Record<string, unknown> = {
-    attributes: {
-      name: params.name,
-      ...(params.description ? { description: params.description } : {}),
-    },
-  };
-  if (params.trackIds?.length) {
-    body.relationships = {
-      tracks: {
-        data: params.trackIds.map((id) => ({ id, type: 'songs' })),
-      },
-    };
-  }
-  return appleFetch('/me/library/playlists', {
-    method: 'POST',
-    body,
-    musicUserToken: userToken,
+export async function findFirstByQuery(params: {
+  query: string;
+  storefront?: string;
+  limit?: number;
+}): Promise<AppleMusicResource<AppleMusicSongAttributes>[]> {
+  const result = await searchCatalog({
+    term: params.query,
+    storefront: params.storefront,
+    types: 'songs',
+    limit: params.limit ?? 10,
   });
+  // searchCatalog returns generic AppleMusicResource (Record<string, unknown> attrs);
+  // when we restrict types=songs the data is necessarily song resources.
+  return (result.results.songs?.data ??
+    []) as unknown as AppleMusicResource<AppleMusicSongAttributes>[];
 }
