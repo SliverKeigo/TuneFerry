@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { CSSProperties, ReactNode } from 'react';
@@ -8,20 +9,21 @@ import * as Icon from './icons';
 interface NavItem {
   to: string;
   end?: boolean;
-  label: string;
+  labelKey: 'home' | 'import' | 'match' | 'export' | 'settingsShort';
   icon: ReactNode;
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { to: '/', end: true, label: 'Home', icon: <Icon.Home size={18} /> },
-  { to: '/import', label: 'Import', icon: <Icon.Filter size={18} /> },
-  { to: '/match', label: 'Match', icon: <Icon.Wand size={18} /> },
-  { to: '/export', label: 'Export', icon: <Icon.Arrow size={18} /> },
-  { to: '/settings', label: 'Set.', icon: <Icon.Gear size={18} /> },
+  { to: '/', end: true, labelKey: 'home', icon: <Icon.Home size={18} /> },
+  { to: '/import', labelKey: 'import', icon: <Icon.Filter size={18} /> },
+  { to: '/match', labelKey: 'match', icon: <Icon.Wand size={18} /> },
+  { to: '/export', labelKey: 'export', icon: <Icon.Arrow size={18} /> },
+  { to: '/settings', labelKey: 'settingsShort', icon: <Icon.Gear size={18} /> },
 ];
 
 export default function MobileNav() {
   const pathname = usePathname();
+  const t = useTranslations('nav');
 
   const isActive = (href: string, end?: boolean) => {
     if (end) return pathname === href;
@@ -50,7 +52,7 @@ export default function MobileNav() {
         return (
           <Link key={item.to} href={item.to} style={itemStyle(active)}>
             {item.icon}
-            {item.label}
+            {t(item.labelKey)}
           </Link>
         );
       })}

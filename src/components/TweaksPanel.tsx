@@ -1,47 +1,60 @@
 'use client';
 
 import { ACCENT_HUES, type Tweaks, useTweaks } from '@/hooks/useTweaks';
+import { useTranslations } from 'next-intl';
 import { Segmented } from './primitives';
 
 export default function TweaksPanel() {
   const { tweaks, setTweak, resetTweaks } = useTweaks();
+  const t = useTranslations('settings');
 
   return (
     <div style={{ display: 'grid', gap: 18 }}>
-      <Row label="Theme">
+      <Row label={t('labelTheme')}>
         <Segmented<Tweaks['theme']>
           value={tweaks.theme}
           onChange={(v) => setTweak('theme', v)}
           options={[
-            { value: 'dark', label: 'Dark' },
-            { value: 'light', label: 'Light' },
+            { value: 'dark', label: t('themeDark') },
+            { value: 'light', label: t('themeLight') },
           ]}
         />
       </Row>
 
-      <Row label="Surface">
+      <Row label={t('labelSurface')}>
         <Segmented<Tweaks['surface']>
           value={tweaks.surface}
           onChange={(v) => setTweak('surface', v)}
           options={[
-            { value: 'glass', label: 'Glass' },
-            { value: 'flat', label: 'Flat' },
+            { value: 'glass', label: t('surfaceGlass') },
+            { value: 'flat', label: t('surfaceFlat') },
           ]}
         />
       </Row>
 
-      <Row label="Navigation">
+      <Row label={t('labelNavigation')}>
         <Segmented<Tweaks['nav']>
           value={tweaks.nav}
           onChange={(v) => setTweak('nav', v)}
           options={[
-            { value: 'sidebar', label: 'Sidebar' },
-            { value: 'topnav', label: 'Top nav' },
+            { value: 'sidebar', label: t('navSidebar') },
+            { value: 'topnav', label: t('navTopnav') },
           ]}
         />
       </Row>
 
-      <Row label="Accent">
+      <Row label={t('labelLanguage')}>
+        <Segmented<Tweaks['locale']>
+          value={tweaks.locale}
+          onChange={(v) => setTweak('locale', v)}
+          options={[
+            { value: 'en', label: t('langEn') },
+            { value: 'zh', label: t('langZh') },
+          ]}
+        />
+      </Row>
+
+      <Row label={t('labelAccent')}>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {ACCENT_HUES.map((h) => {
             const active = tweaks.accentHue === h.value;
@@ -78,7 +91,7 @@ export default function TweaksPanel() {
             borderRadius: 6,
           }}
         >
-          Reset to defaults
+          {t('reset')}
         </button>
       </div>
     </div>

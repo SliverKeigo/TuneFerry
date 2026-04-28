@@ -11,6 +11,7 @@ import {
   useToast,
 } from '@/components/primitives';
 import type { AppleSongLite, MatchResult } from '@/lib/matchService';
+import { useTranslations } from 'next-intl';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 
@@ -37,8 +38,8 @@ export default function ExportPage() {
 
 function ExportLoadingFallback() {
   return (
-    <main style={{ padding: '40px 32px', maxWidth: 720, margin: 0 }}>
-      <div style={{ color: 'var(--text-3)', fontSize: 13 }}>Loading export…</div>
+    <main style={{ padding: '40px 32px', maxWidth: 920, margin: '0 auto' }}>
+      <div style={{ color: 'var(--text-3)', fontSize: 13 }}>Loading…</div>
     </main>
   );
 }
@@ -47,6 +48,7 @@ function ExportPageContent() {
   const router = useRouter();
   const params = useSearchParams();
   const toast = useToast();
+  const t = useTranslations('export');
 
   const spotifyId = params.get('spotify_id');
   const [missing, setMissing] = useState(false);
@@ -97,11 +99,11 @@ function ExportPageContent() {
     const text = rows.map((r) => r.apple.catalogUrl).join('\n');
     try {
       await navigator.clipboard.writeText(text);
-      toast({ message: `Copied ${rows.length} link${rows.length === 1 ? '' : 's'}.`, tone: 'ok' });
+      toast({ message: t('copiedToast', { n: rows.length }), tone: 'ok' });
     } catch {
-      toast({ message: 'Clipboard unavailable in this browser.', tone: 'err' });
+      toast({ message: t('clipboardError'), tone: 'err' });
     }
-  }, [rows, toast]);
+  }, [rows, toast, t]);
 
   const onDownloadM3U = useCallback(() => {
     if (!rows || rows.length === 0) return;
@@ -126,13 +128,10 @@ function ExportPageContent() {
 
   if (missing) {
     return (
-      <main style={{ padding: '40px 32px', maxWidth: 720, margin: 0 }}>
-        <PageHeader
-          title="Nothing to export"
-          desc="We couldn't find matched results in your session. Start a new migration."
-        />
+      <main style={{ padding: '40px 32px', maxWidth: 920, margin: '0 auto' }}>
+        <PageHeader title={t('missingTitle')} desc={t('missingDesc')} />
         <Button variant="primary" onClick={() => router.push('/import')}>
-          Start a migration
+          {t('startMigration')}
         </Button>
       </main>
     );
@@ -140,19 +139,19 @@ function ExportPageContent() {
 
   if (!rows) {
     return (
-      <main style={{ padding: 40, color: 'var(--text-3)', fontSize: 13 }}>Loading export…</main>
+      <main style={{ padding: 40, color: 'var(--text-3)', fontSize: 13 }}>{t('loading')}</main>
     );
   }
 
   return (
-    <main style={{ padding: '32px 32px 64px', maxWidth: 1080, margin: 0 }}>
+    <main style={{ padding: '32px 48px 64px', maxWidth: 1280, margin: '0 auto' }}>
       <PageHeader
-        eyebrow="Step 3 of 3"
-        title="Export to Apple Music"
-        desc={`${rows.length} track${rows.length === 1 ? '' : 's'} ready to ferry across.`}
+        eyebrow={t('eyebrow')}
+        title={t('title')}
+        desc={t('desc', { count: rows.length })}
         right={
           <Button variant="ghost" icon={<Icon.Refresh size={14} />} onClick={onStartOver}>
-            Start another migration
+            {t('startAnother')}
           </Button>
         }
       />
@@ -167,7 +166,7 @@ function ExportPageContent() {
             fontSize: 13,
           }}
         >
-          You excluded every track on the previous step — nothing to export.
+          {t('noneIncluded')}
         </div>
       )}
 
@@ -185,10 +184,10 @@ function ExportPageContent() {
             <SectionHeader
               title={
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-                  <Icon.Link size={15} /> Deep link list
+                  <Icon.Link size={15} /> {t('deepLinkTitle')}
                 </span>
               }
-              desc="Tap each link to open Apple Music. The Add to Library button is one tap away."
+              desc={t('deepLinkDesc')}
               right={
                 <Button
                   size="sm"
@@ -196,7 +195,7 @@ function ExportPageContent() {
                   icon={<Icon.Copy size={13} />}
                   onClick={onCopyAll}
                 >
-                  Copy all
+                  {t('copyAll')}
                 </Button>
               }
             />
@@ -274,7 +273,7 @@ function ExportPageContent() {
                     href={r.apple.catalogUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    aria-label="Open in Apple Music"
+                    aria-label={t('openAria')}
                     style={{
                       display: 'inline-flex',
                       alignItems: 'center',
@@ -298,10 +297,10 @@ function ExportPageContent() {
             <SectionHeader
               title={
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-                  <Icon.Disc size={15} /> .m3u8 download
+                  <Icon.Disc size={15} /> {t('m3u8Title')}
                 </span>
               }
-              desc="A playlist file you can drop into the macOS Music app."
+              desc={t('m3u8Desc')}
             />
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <Button
@@ -310,11 +309,10 @@ function ExportPageContent() {
                 onClick={onDownloadM3U}
                 disabled={rows.length === 0}
               >
-                Download .m3u8
+                {t('downloadM3u8')}
               </Button>
               <Pill tone="warn" style={{ padding: '8px 10px', alignSelf: 'flex-start' }}>
-                <Icon.Alert size={12} /> macOS Music app can import .m3u8; iOS cannot. The deep link
-                list is the universal path.
+                <Icon.Alert size={12} /> {t('iosWarn')}
               </Pill>
               <details>
                 <summary
@@ -325,7 +323,7 @@ function ExportPageContent() {
                     padding: '4px 0',
                   }}
                 >
-                  Preview
+                  {t('preview')}
                 </summary>
                 <pre
                   style={{

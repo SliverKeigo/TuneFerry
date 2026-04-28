@@ -11,6 +11,7 @@ import {
   useToast,
 } from '@/components/primitives';
 import { useStorefront } from '@/hooks/useStorefront';
+import { useTranslations } from 'next-intl';
 import { type FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 
 interface ApiErrorBody {
@@ -29,21 +30,21 @@ interface TokenState {
   payload: JwtPayload;
 }
 
-const PRESETS: { value: string; label: string }[] = [
-  { value: 'us', label: 'US' },
-  { value: 'gb', label: 'UK' },
-  { value: 'jp', label: 'Japan' },
-  { value: 'hk', label: 'Hong Kong' },
-  { value: 'tw', label: 'Taiwan' },
+type PresetKey = 'presetUs' | 'presetGb' | 'presetJp' | 'presetHk' | 'presetTw';
+
+const PRESETS: { value: string; key: PresetKey }[] = [
+  { value: 'us', key: 'presetUs' },
+  { value: 'gb', key: 'presetGb' },
+  { value: 'jp', key: 'presetJp' },
+  { value: 'hk', key: 'presetHk' },
+  { value: 'tw', key: 'presetTw' },
 ];
 
 export default function SettingsPage() {
+  const t = useTranslations('settings');
   return (
-    <main style={{ padding: '32px 32px 80px', maxWidth: 880, margin: 0 }}>
-      <PageHeader
-        title="Settings"
-        desc="Storefront, appearance, and the Apple Music developer token."
-      />
+    <main style={{ padding: '32px 32px 80px', maxWidth: 1100, margin: '0 auto' }}>
+      <PageHeader title={t('title')} desc={t('desc')} />
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
         <StorefrontSection />
@@ -59,6 +60,7 @@ export default function SettingsPage() {
 function StorefrontSection() {
   const [storefront, setStorefront] = useStorefront();
   const [custom, setCustom] = useState('');
+  const t = useTranslations('settings');
 
   const onCustomSubmit = useCallback(
     (e: FormEvent<HTMLFormElement>) => {
@@ -75,9 +77,11 @@ function StorefrontSection() {
   return (
     <section className="panel" style={{ padding: 18 }}>
       <SectionHeader
-        title="Apple Music storefront"
-        desc="Two-letter region code used when searching the Apple Music catalog."
-        right={<Pill tone="accent">Active: {storefront.toUpperCase()}</Pill>}
+        title={t('storefrontTitle')}
+        desc={t('storefrontDesc')}
+        right={
+          <Pill tone="accent">{t('storefrontActive', { code: storefront.toUpperCase() })}</Pill>
+        }
       />
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
@@ -90,7 +94,7 @@ function StorefrontSection() {
               variant={active ? 'primary' : 'secondary'}
               onClick={() => setStorefront(p.value)}
             >
-              {p.label} ({p.value})
+              {t(p.key)} ({p.value})
             </Button>
           );
         })}
@@ -101,12 +105,12 @@ function StorefrontSection() {
           className="input-native"
           type="text"
           maxLength={2}
-          placeholder="Custom (e.g. de)"
+          placeholder={t('storefrontCustomPlaceholder')}
           value={custom}
           onChange={(e) => setCustom(e.target.value)}
           spellCheck={false}
           autoComplete="off"
-          aria-label="Custom storefront code"
+          aria-label={t('storefrontCustomAria')}
           style={{ width: 160 }}
         />
         <Button
@@ -115,7 +119,7 @@ function StorefrontSection() {
           variant="secondary"
           disabled={!/^[a-z]{2}$/i.test(custom.trim())}
         >
-          Set
+          {t('storefrontSet')}
         </Button>
       </form>
     </section>
@@ -125,9 +129,10 @@ function StorefrontSection() {
 // ─── Appearance ─────────────────────────────────────────────────────────────
 
 function AppearanceSection() {
+  const t = useTranslations('settings');
   return (
     <section className="panel" style={{ padding: 18 }}>
-      <SectionHeader title="Appearance" desc="Theme, surface, navigation, and accent." />
+      <SectionHeader title={t('appearanceTitle')} desc={t('appearanceDesc')} />
       <TweaksPanel />
     </section>
   );
@@ -137,6 +142,7 @@ function AppearanceSection() {
 
 function AppleTokenSection() {
   const toast = useToast();
+  const t = useTranslations('settings');
   const [state, setState] = useState<TokenState | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -188,31 +194,31 @@ function AppleTokenSection() {
     return {
       iso: date.toISOString(),
       local: date.toLocaleString(),
-      relative: expired ? `expired ${human} ago` : `in ${human}`,
+      relative: expired ? t('tokenExpiredAgo', { human }) : t('tokenExpiresIn', { human }),
       expired,
     };
-  }, [state]);
+  }, [state, t]);
 
   const onCopy = useCallback(async () => {
     if (!state) return;
     try {
       await navigator.clipboard.writeText(state.token);
-      toast({ message: 'Token copied.', tone: 'ok' });
+      toast({ message: t('tokenCopiedToast'), tone: 'ok' });
     } catch {
       toast({ message: 'Clipboard unavailable in this browser.', tone: 'err' });
     }
-  }, [state, toast]);
+  }, [state, toast, t]);
 
   return (
     <section className="panel" style={{ padding: 18 }}>
       <SectionHeader
         title={
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-            <Icon.Disc size={15} /> Apple Music developer token
+            <Icon.Disc size={15} /> {t('tokenTitle')}
           </span>
         }
-        desc="JWT used to call Apple's catalog. Loaded server-side from environment configuration."
-        right={state ? <Pill tone="accent">WebPlay scraped</Pill> : null}
+        desc={t('tokenDesc')}
+        right={state ? <Pill tone="accent">{t('tokenScraped')}</Pill> : null}
       />
 
       {loading && (
@@ -225,7 +231,7 @@ function AppleTokenSection() {
             fontSize: 13,
           }}
         >
-          <Spinner /> Loading token…
+          <Spinner /> {t('tokenLoading')}
         </div>
       )}
 
@@ -251,23 +257,23 @@ function AppleTokenSection() {
 
       {state && !loading && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <Row label="Source">
-            <Pill tone="accent">WebPlay scraped</Pill>
+          <Row label={t('tokenSource')}>
+            <Pill tone="accent">{t('tokenScraped')}</Pill>
           </Row>
           {expiry && (
-            <Row label="Expires">
+            <Row label={t('tokenExpires')}>
               <span style={{ fontSize: 13, color: 'var(--text-2)' }}>
                 {expiry.local} <span style={{ color: 'var(--text-4)' }}>({expiry.relative})</span>
               </span>
               {expiry.expired && (
                 <Pill tone="err" style={{ marginLeft: 8 }}>
-                  Expired
+                  {t('tokenExpired')}
                 </Pill>
               )}
             </Row>
           )}
           {state.payload.iss && (
-            <Row label="Issuer (team)">
+            <Row label={t('tokenIssuer')}>
               <code
                 style={{
                   fontSize: 12,
@@ -279,9 +285,9 @@ function AppleTokenSection() {
               </code>
             </Row>
           )}
-          <Row label="Token">
+          <Row label={t('tokenLabel')}>
             <Button size="sm" variant="secondary" icon={<Icon.Copy size={13} />} onClick={onCopy}>
-              Copy token
+              {t('tokenCopy')}
             </Button>
           </Row>
         </div>

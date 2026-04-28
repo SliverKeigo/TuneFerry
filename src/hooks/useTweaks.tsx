@@ -6,12 +6,14 @@ import { useLocalStorage } from './useLocalStorage';
 export type ThemeTweak = 'dark' | 'light';
 export type SurfaceTweak = 'glass' | 'flat';
 export type NavTweak = 'sidebar' | 'topnav';
+export type Locale = 'en' | 'zh';
 
 export interface Tweaks {
   theme: ThemeTweak;
   surface: SurfaceTweak;
   nav: NavTweak;
   accentHue: number;
+  locale: Locale;
 }
 
 export const DEFAULT_TWEAKS: Tweaks = {
@@ -19,6 +21,7 @@ export const DEFAULT_TWEAKS: Tweaks = {
   surface: 'glass',
   nav: 'sidebar',
   accentHue: 135,
+  locale: 'en',
 };
 
 export const ACCENT_HUES: { value: number; label: string }[] = [
@@ -47,25 +50,32 @@ const TweaksContext = createContext<TweaksApi | null>(null);
  * and the `--accent-h` CSS variable so any component can read them via CSS.
  */
 export function TweaksProvider({ children }: { children: ReactNode }) {
-  const [tweaks, setTweaks, clearTweaks] = useLocalStorage<Tweaks>('am.tweaks', DEFAULT_TWEAKS);
+  const [stored, setStored, clearStored] = useLocalStorage<Partial<Tweaks>>(
+    'am.tweaks',
+    DEFAULT_TWEAKS,
+  );
+  // Merge against defaults so users with older localStorage entries (missing
+  // newly-introduced fields like `locale`) still get sensible values.
+  const tweaks = useMemo<Tweaks>(() => ({ ...DEFAULT_TWEAKS, ...stored }), [stored]);
 
   useEffect(() => {
     const root = document.documentElement;
     root.dataset.theme = tweaks.theme;
     root.dataset.surface = tweaks.surface;
+    root.lang = tweaks.locale;
     root.style.setProperty('--accent-h', String(tweaks.accentHue));
   }, [tweaks]);
 
   const setTweak = useCallback(
     <K extends keyof Tweaks>(key: K, value: Tweaks[K]) => {
-      setTweaks((prev) => ({ ...prev, [key]: value }));
+      setStored((prev) => ({ ...DEFAULT_TWEAKS, ...prev, [key]: value }));
     },
-    [setTweaks],
+    [setStored],
   );
 
   const api = useMemo<TweaksApi>(
-    () => ({ tweaks, setTweak, resetTweaks: clearTweaks }),
-    [tweaks, setTweak, clearTweaks],
+    () => ({ tweaks, setTweak, resetTweaks: clearStored }),
+    [tweaks, setTweak, clearStored],
   );
 
   return <TweaksContext.Provider value={api}>{children}</TweaksContext.Provider>;

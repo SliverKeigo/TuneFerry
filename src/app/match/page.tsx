@@ -14,6 +14,7 @@ import {
 import { useStorefront } from '@/hooks/useStorefront';
 import type { AppleSongLite, MatchConfidence, MatchResult } from '@/lib/matchService';
 import type { SpotifyPlaylist, SpotifyTrack } from '@/lib/types/spotify';
+import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
@@ -53,8 +54,8 @@ export default function MatchPage() {
 
 function MatchLoadingFallback() {
   return (
-    <main style={{ padding: '40px 32px', maxWidth: 720, margin: 0 }}>
-      <div style={{ color: 'var(--text-3)', fontSize: 13 }}>Loading match…</div>
+    <main style={{ padding: '40px 32px', maxWidth: 920, margin: '0 auto' }}>
+      <div style={{ color: 'var(--text-3)', fontSize: 13 }}>Loading…</div>
     </main>
   );
 }
@@ -64,6 +65,7 @@ function MatchPageContent() {
   const params = useSearchParams();
   const toast = useToast();
   const [storefront] = useStorefront();
+  const t = useTranslations('match');
 
   const spotifyId = params.get('spotify_id');
 
@@ -162,13 +164,10 @@ function MatchPageContent() {
   // ── Render branches ─────────────────────────────────────────────────────────
   if (missing) {
     return (
-      <main style={{ padding: '40px 32px', maxWidth: 720, margin: 0 }}>
-        <PageHeader
-          title="Playlist not staged"
-          desc="We couldn't find this playlist in your session. Head back to import to start over."
-        />
+      <main style={{ padding: '40px 32px', maxWidth: 920, margin: '0 auto' }}>
+        <PageHeader title={t('missingTitle')} desc={t('missingDesc')} />
         <Button variant="primary" onClick={() => router.push('/import')}>
-          Go to Import
+          {t('goImport')}
         </Button>
       </main>
     );
@@ -180,23 +179,23 @@ function MatchPageContent() {
         <div
           style={{ display: 'inline-flex', alignItems: 'center', gap: 10, color: 'var(--text-3)' }}
         >
-          <Spinner /> Loading playlist…
+          <Spinner /> {t('loadingPlaylist')}
         </div>
       </main>
     );
   }
 
   return (
-    <main style={{ padding: '32px 32px 120px', maxWidth: 1080, margin: 0 }}>
+    <main style={{ padding: '32px 48px 120px', maxWidth: 1280, margin: '0 auto' }}>
       <PageHeader
-        eyebrow={`Step 2 of 3 · storefront ${storefront}`}
+        eyebrow={t('eyebrow', { storefront })}
         title={playlist.name}
-        desc={`${playlist.totalTracks} tracks · by ${playlist.owner.displayName}`}
+        desc={t('byOwner', { count: playlist.totalTracks, owner: playlist.owner.displayName })}
         right={
           <div style={{ display: 'flex', gap: 6 }}>
-            <Pill tone="ok">{counts.high} matched</Pill>
-            <Pill tone="warn">{counts.low} low</Pill>
-            <Pill tone="err">{counts.none} none</Pill>
+            <Pill tone="ok">{t('matched', { n: counts.high })}</Pill>
+            <Pill tone="warn">{t('low', { n: counts.low })}</Pill>
+            <Pill tone="err">{t('none', { n: counts.none })}</Pill>
           </div>
         }
       />
@@ -213,7 +212,7 @@ function MatchPageContent() {
             fontSize: 13,
           }}
         >
-          <Spinner /> Matching {playlist.tracks.length} tracks against Apple Music ({storefront})…
+          <Spinner /> {t('matching', { count: playlist.tracks.length, storefront })}
         </div>
       )}
 
@@ -248,6 +247,7 @@ function MatchPageContent() {
             <MatchRow
               key={row.result.spotify.id}
               row={row}
+              t={t}
               onToggleInclude={() =>
                 updateRow(i, (prev) => ({ ...prev, included: !prev.included }))
               }
@@ -277,13 +277,16 @@ function MatchPageContent() {
         }}
       >
         <div style={{ fontSize: 13, color: 'var(--text-2)' }}>
-          <strong style={{ color: 'var(--text)', fontWeight: 600 }}>{counts.included}</strong>{' '}
-          tracks included · {counts.high + counts.low} matched of {playlist.tracks.length}
+          {t.rich('stickyIncluded', {
+            included: counts.included,
+            matched: counts.high + counts.low,
+            total: playlist.tracks.length,
+          })}
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <Link href="/import" style={{ display: 'inline-flex' }}>
             <Button variant="ghost" size="md">
-              Back
+              {t('back')}
             </Button>
           </Link>
           <Button
@@ -293,7 +296,7 @@ function MatchPageContent() {
             onClick={onContinue}
             iconRight={<Icon.Arrow size={14} />}
           >
-            Continue to Export
+            {t('continueExport')}
           </Button>
         </div>
       </div>
@@ -305,10 +308,12 @@ function MatchPageContent() {
 
 function MatchRow({
   row,
+  t,
   onToggleInclude,
   onPick,
 }: {
   row: RowState;
+  t: ReturnType<typeof useTranslations<'match'>>;
   onToggleInclude: () => void;
   onPick: (cand: AppleSongLite | null) => void;
 }) {
@@ -335,7 +340,7 @@ function MatchRow({
         type="checkbox"
         checked={included}
         onChange={onToggleInclude}
-        aria-label="Include in export"
+        aria-label={t('includeAria')}
         style={{ width: 16, height: 16, accentColor: 'var(--accent)', cursor: 'pointer' }}
       />
 
@@ -413,7 +418,7 @@ function MatchRow({
         </div>
       ) : (
         <div style={{ fontSize: 12.5, color: 'var(--text-4)', fontStyle: 'italic' }}>
-          No Apple Music match
+          {t('noAppleMatch')}
         </div>
       )}
 
@@ -438,7 +443,7 @@ function MatchRow({
                 gap: 4,
               }}
             >
-              Change <Icon.ChevronDown size={11} />
+              {t('change')} <Icon.ChevronDown size={11} />
             </summary>
             <div
               style={{
@@ -459,7 +464,7 @@ function MatchRow({
             >
               {candidates.length === 0 && (
                 <div style={{ padding: 10, fontSize: 12, color: 'var(--text-4)' }}>
-                  No alternatives available.
+                  {t('noAlternatives')}
                 </div>
               )}
               {candidates.map((c) => {
@@ -535,7 +540,7 @@ function MatchRow({
                     textAlign: 'left',
                   }}
                 >
-                  Clear pick (mark as no match)
+                  {t('clearPick')}
                 </button>
               )}
             </div>

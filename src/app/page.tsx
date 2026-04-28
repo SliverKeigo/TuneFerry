@@ -2,18 +2,20 @@
 
 import * as Icon from '@/components/icons';
 import { Button, PageHeader, Pill } from '@/components/primitives';
+import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import type { ReactNode } from 'react';
 
 export default function HomePage() {
   const router = useRouter();
+  const t = useTranslations('home');
 
   return (
-    <main style={{ padding: '40px 32px 64px', maxWidth: 980, margin: 0 }}>
+    <main style={{ padding: '40px 48px 64px', maxWidth: 1100, margin: '0 auto' }}>
       <PageHeader
-        eyebrow="Spotify → Apple Music"
-        title="Move playlists. Keep your taste."
-        desc="Paste a public Spotify playlist URL — we match every track against the Apple Music catalog and hand you a clean deep-link list (and a .m3u8) to bring it home."
+        eyebrow={t('eyebrow')}
+        title={t('title')}
+        desc={t('desc')}
         right={
           <Button
             variant="primary"
@@ -21,7 +23,7 @@ export default function HomePage() {
             icon={<Icon.Arrow size={16} />}
             onClick={() => router.push('/import')}
           >
-            Migrate a playlist
+            {t('cta')}
           </Button>
         }
       />
@@ -38,20 +40,20 @@ export default function HomePage() {
         <StepCard
           step={1}
           icon={<Icon.Filter size={18} />}
-          title="Import"
-          desc="Paste a public Spotify URL, or pick from your own playlists after signing in."
+          title={t('step1Title')}
+          desc={t('step1Desc')}
         />
         <StepCard
           step={2}
           icon={<Icon.Wand size={18} />}
-          title="Match"
-          desc="ISRC-first lookup, fuzzy fallback, with confidence scores you can override."
+          title={t('step2Title')}
+          desc={t('step2Desc')}
         />
         <StepCard
           step={3}
           icon={<Icon.Arrow size={18} />}
-          title="Export"
-          desc="Get a tappable deep-link list — or a .m3u8 file for the macOS Music app."
+          title={t('step3Title')}
+          desc={t('step3Desc')}
         />
       </section>
 
@@ -64,8 +66,7 @@ export default function HomePage() {
         }}
       >
         <Pill tone="warn" style={{ padding: '8px 14px', fontSize: 12, lineHeight: 1.4 }}>
-          <Icon.Alert size={13} /> Beta. Apple Music doesn&rsquo;t permit programmatic
-          add-to-library, so the final step is a deep link list — you tap, Apple Music adds.
+          <Icon.Alert size={13} /> {t('betaNote')}
         </Pill>
       </div>
     </main>

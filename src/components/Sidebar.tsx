@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { CSSProperties, ReactNode } from 'react';
@@ -8,20 +9,21 @@ import * as Icon from './icons';
 interface NavItem {
   to: string;
   end?: boolean;
-  label: string;
+  labelKey: 'home' | 'import' | 'match' | 'export' | 'settings';
   icon: ReactNode;
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { to: '/', end: true, label: 'Home', icon: <Icon.Home size={16} /> },
-  { to: '/import', label: 'Import', icon: <Icon.Filter size={16} /> },
-  { to: '/match', label: 'Match', icon: <Icon.Wand size={16} /> },
-  { to: '/export', label: 'Export', icon: <Icon.Arrow size={16} /> },
-  { to: '/settings', label: 'Settings', icon: <Icon.Gear size={16} /> },
+  { to: '/', end: true, labelKey: 'home', icon: <Icon.Home size={18} /> },
+  { to: '/import', labelKey: 'import', icon: <Icon.Filter size={18} /> },
+  { to: '/match', labelKey: 'match', icon: <Icon.Wand size={18} /> },
+  { to: '/export', labelKey: 'export', icon: <Icon.Arrow size={18} /> },
+  { to: '/settings', labelKey: 'settings', icon: <Icon.Gear size={18} /> },
 ];
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const t = useTranslations('nav');
 
   const isActive = (href: string, end?: boolean) => {
     if (end) return pathname === href;
@@ -31,9 +33,9 @@ export default function Sidebar() {
   return (
     <aside
       style={{
-        width: 232,
+        width: 268,
         flexShrink: 0,
-        padding: '16px 12px',
+        padding: '20px 14px',
         display: 'flex',
         flexDirection: 'column',
         gap: 4,
@@ -51,24 +53,24 @@ export default function Sidebar() {
         style={{
           display: 'flex',
           alignItems: 'center',
-          gap: 10,
-          padding: '6px 10px 18px',
+          gap: 12,
+          padding: '6px 10px 22px',
           marginBottom: 4,
         }}
       >
         <span style={{ color: 'var(--accent)', display: 'inline-flex' }}>
-          <Icon.Logo size={24} />
+          <Icon.Logo size={28} />
         </span>
         <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <span style={{ fontSize: 13, fontWeight: 600, letterSpacing: -0.2 }}>TuneFerry</span>
+          <span style={{ fontSize: 15, fontWeight: 600, letterSpacing: -0.2 }}>TuneFerry</span>
           <span
             style={{
-              fontSize: 10.5,
+              fontSize: 11.5,
               color: 'var(--text-4)',
               fontFamily: 'var(--font-mono)',
             }}
           >
-            Spotify → Apple Music · beta
+            {t('tagline')}
           </span>
         </div>
       </div>
@@ -77,15 +79,15 @@ export default function Sidebar() {
       <nav style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
         <div
           style={{
-            fontSize: 10.5,
+            fontSize: 11.5,
             fontWeight: 600,
             letterSpacing: 0.5,
             color: 'var(--text-4)',
-            padding: '8px 10px 6px',
+            padding: '8px 12px 8px',
             textTransform: 'uppercase',
           }}
         >
-          Workspace
+          {t('workspace')}
         </div>
         {NAV_ITEMS.map((item) => {
           const active = isActive(item.to, item.end);
@@ -99,7 +101,7 @@ export default function Sidebar() {
               >
                 {item.icon}
               </span>
-              <span style={{ flex: 1 }}>{item.label}</span>
+              <span style={{ flex: 1 }}>{t(item.labelKey)}</span>
               {active && <Icon.Chevron size={14} style={{ color: 'var(--text-4)' }} />}
             </Link>
           );
@@ -115,10 +117,10 @@ function navLinkStyle(active: boolean): CSSProperties {
   return {
     display: 'flex',
     alignItems: 'center',
-    gap: 10,
-    padding: '8px 10px',
+    gap: 12,
+    padding: '10px 12px',
     borderRadius: 8,
-    fontSize: 13,
+    fontSize: 14.5,
     fontWeight: 500,
     textDecoration: 'none',
     color: active ? 'var(--text)' : 'var(--text-2)',

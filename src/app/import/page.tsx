@@ -3,6 +3,7 @@
 import * as Icon from '@/components/icons';
 import { Button, PageHeader, Pill, Spinner, useToast } from '@/components/primitives';
 import type { SpotifyPlaylist } from '@/lib/types/spotify';
+import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { type FormEvent, useCallback, useState } from 'react';
 
@@ -18,6 +19,7 @@ interface FetchError {
 export default function ImportPage() {
   const router = useRouter();
   const toast = useToast();
+  const t = useTranslations('import');
 
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -42,7 +44,7 @@ export default function ImportPage() {
         const playlist = (await res.json()) as SpotifyPlaylist;
         sessionStorage.setItem(`tf.staged.${playlist.id}`, JSON.stringify(playlist));
         toast({
-          message: `Loaded "${playlist.name}" — ${playlist.totalTracks} tracks.`,
+          message: t('loadedToast', { name: playlist.name, count: playlist.totalTracks }),
           tone: 'ok',
         });
         router.push(`/match?spotify_id=${encodeURIComponent(playlist.id)}`);
@@ -57,43 +59,38 @@ export default function ImportPage() {
         setLoading(false);
       }
     },
-    [input, loading, router, toast],
+    [input, loading, router, toast, t],
   );
 
   const errorHint = error
     ? error.status === 404
-      ? 'Playlist not found or private — make sure the link is publicly accessible.'
+      ? t('errorNotFound')
       : error.status === 502
-        ? 'Spotify changed their embed page — please try again, or report this.'
+        ? t('errorBadGateway')
         : error.message
     : null;
 
   return (
-    <main style={{ padding: '32px 32px 80px', maxWidth: 720, margin: 0 }}>
+    <main style={{ padding: '32px 32px 80px', maxWidth: 920, margin: '0 auto' }}>
       <div style={{ marginBottom: 16 }}>
         <Pill tone="warn">
-          <Icon.Alert size={12} /> Public playlists only. Set the playlist to public on Spotify
-          first if needed.
+          <Icon.Alert size={12} /> {t('publicOnly')}
         </Pill>
       </div>
 
-      <PageHeader
-        eyebrow="Step 1 of 3"
-        title="Import a Spotify playlist"
-        desc="Paste a public Spotify playlist URL and we'll pull the tracks. No sign-in required."
-      />
+      <PageHeader eyebrow={t('eyebrow')} title={t('title')} desc={t('desc')} />
 
       <form onSubmit={onSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         <input
           className="input-native"
           type="text"
-          placeholder="https://open.spotify.com/playlist/... or playlist ID"
+          placeholder={t('placeholder')}
           value={input}
           onChange={(e) => setInput(e.target.value)}
           disabled={loading}
           spellCheck={false}
           autoComplete="off"
-          aria-label="Spotify playlist URL or ID"
+          aria-label={t('inputAria')}
         />
 
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -104,12 +101,10 @@ export default function ImportPage() {
             icon={loading ? <Spinner size={14} /> : undefined}
             iconRight={!loading ? <Icon.Arrow size={14} /> : undefined}
           >
-            {loading ? 'Fetching…' : 'Fetch playlist'}
+            {loading ? t('fetching') : t('fetch')}
           </Button>
           {loading && (
-            <span style={{ fontSize: 12.5, color: 'var(--text-3)' }}>
-              Scraping the public embed page…
-            </span>
+            <span style={{ fontSize: 12.5, color: 'var(--text-3)' }}>{t('scrapingHint')}</span>
           )}
         </div>
       </form>
@@ -148,17 +143,22 @@ export default function ImportPage() {
           style={{ margin: 0, paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 6 }}
         >
           <li>
-            Paste any public Spotify playlist URL — works for both{' '}
-            <code style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: 'var(--text-3)' }}>
-              https://open.spotify.com/playlist/&lt;id&gt;?si=…
-            </code>{' '}
-            and bare IDs.
+            {t.rich('tip1', {
+              code: (chunks) => (
+                <code
+                  style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: 'var(--text-3)' }}
+                >
+                  {chunks}
+                </code>
+              ),
+            })}
           </li>
           <li>
-            Up to <strong>100 tracks</strong> per playlist (Spotify embed limit). Spotify's
-            algorithmic playlists like "Today's Top Hits" cap at 50.
+            {t.rich('tip2', {
+              strong: (chunks) => <strong>{chunks}</strong>,
+            })}
           </li>
-          <li>No sign-in. We never see your Spotify account.</li>
+          <li>{t('tip3')}</li>
         </ul>
       </div>
     </main>
