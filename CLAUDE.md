@@ -79,6 +79,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **不翻 API contract message**：API route 返回的 `error.message`、JWT payload 字段、storefront 代码（`us`/`gb`）都是数据契约 / 数据本身，保留英文。前端只翻 UI 文案
 - 加新文案先在 `en.json` 加 key、立刻同步 `zh.json`（结构必须一一对应，否则 next-intl 在缺失语言下静默 fallback 到 key 字符串）
 - Locale 切换在 Settings → Appearance → Language（English / 中文）
+- **`t` 引用不稳定，绝不要进数据获取 / 远程调用 effect 的 deps 列表** —— next-intl 在 locale 变化时返回新 `t`，会让 effect 重跑、重发 fetch、覆盖用户已编辑的本地状态。catch 路径需要翻译时用 ref：`const tRef = useRef(t); tRef.current = t;` 然后 `tRef.current('key')`，把 `t` 排除在 deps 之外。错误状态优先存 key（discriminated union），渲染时才翻译，这样 locale 变化时错误文案能跟着切换
 
 ## Spotify 集成约定
 
@@ -111,6 +112,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **只走 fuzzy**：embed 没有 ISRC，没有 album name。`searchCatalog({ term: name + artist })` → token Jaccard 相似度，duration ±8s 加分。
 - 阈值：≥0.85 → `'high'`、≥0.6 → `'low'`、否则 `'none'`。`MatchConfidence` 类型只有这 3 档（之前的 `'exact'` 已删）
 - **不要加并发**：MVP 串行，100 首约 3 秒，够了。如果用户抱怨慢再 `Promise.all` 分批
+- **AbortSignal 必透传**：`matchOne` / `matchMany` 第三参数收 `AbortSignal`，每首前 `signal?.throwIfAborted()`，节流 sleep 也得监听 abort（用 `addEventListener('abort')` + `clearTimeout`）。`appleFetch` / `searchCatalog` / `findFirstByQuery` 把 signal 链到底层 `fetch`。这条链路是为了在客户端切 storefront / 关页时立刻停掉后端剩余 Apple 调用，不浪费 token 配额。新增任何调 Apple 的 service helper 都要把 signal 当 first-class option
 
 ## Route handler 约定
 
@@ -118,6 +120,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - 用 `@/lib/nextHandler` 的 `withErrorHandler` 包裹，错误统一返回 `{ error: { message, status, details? } }`
 - 读查询/header 用 `pickQuery` / `pickHeader` / `pickInt`
 - 不要重新实现 `requireMethod` —— App Router 按函数名分发，错 method 自动 405
+- **长跑 handler 必须把 `req.signal` 透传给 service 层**（参考 `api/match/route.ts` → `matchMany(tracks, storefront, req.signal)`）。客户端断连时 `req.signal` 自动 abort，`withErrorHandler` 捕到 `AbortError` 返回 499 并 silent（不进 unhandled log）。任何会发起多个外部调用的 handler 都该接这条链，否则用户切页 / 切参数会让后端继续烧配额
 
 ## 测试
 
@@ -132,5 +135,5 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## 文档结构
 
 - `docs/` 在 `.gitignore`，本地临时产物
-- 没有 `specs/` 目录、没有 phase 实施文档 —— 设计讨论走对话，产出写进 README 的 Roadmap / Known Limitations
+- 没有 `specs/` 目录、没有 phase 实施文档 —— 设计讨论走对话，产出写进 README 的 Roadmap（README 只保留 8 个产品向章节：How it works / Tech Stack / Project Layout / Quick Start / Deployment / Scripts / Code Quality / Roadmap，不要重新加 Configuration / Limitations 这种内部细节章节）
 - `ui-design/` 是当年 Apple Music Organizer 的原型参考（gitignored），实际 UI 在 `src/` 下

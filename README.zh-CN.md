@@ -143,6 +143,7 @@ npm run clean          # 清 .next + coverage
 - [x] Phase 19 — 测试覆盖回填：`/api/spotify/playlist` 和 `/api/match` 的 route handler 集成测试 + `pickQuery`/`pickHeader`/`pickInt` / `findFirstByQuery` / `getDeveloperToken` 单元测试。Vitest 加 `@/*` alias 镜像 tsconfig。**34 → 59 测试**
 - [x] Phase 20 — **next-intl i18n（EN / ZH，不带 URL 路由）**。Locale 持久化到 `useTweaks` store，`<html lang>` 同步，nav + 5 个页面完整 messages。新增 `sanitizeTweaks`（每个枚举字段 allow-list，含新加的 `locale`）+ `TweaksProvider` mounted gate 消除 SSR hydration 警告。Sidebar 加宽到 268px，TopNav 提到 64px 并在 1280 列内居中。**+8 测试覆盖 sanitizer / 自我治愈写路径**
 - [x] Phase 21 — **响应式 layout，断点 820px**（与 AppShell 的 mobile media query 同步）。每页 `<main>`、Match 行、sticky bar、Export 双列 grid、PageHeader、SectionHeader、Settings/Tweaks Row 全部走 `globals.css` 工具类让 `@media` 能 cascade。Mobile（≤820px）下三卡 / 五列 / 双列 grid 折成单列、PageHeader right 区下沉、候选 popover 收窄、sticky bar 提到 MobileNav 之上、写死的 oklch 暗色换成 `var(--bg-2)` 让浅色主题不再闪烁。Playwright 1440 / 768 / 375 三个 viewport 端到端验证
+- [x] Phase 22 — **Match 流程稳健化**。把 `/api/match` 的 effect 从 `t` 解耦（错误改为 discriminated union 存储，`t` 通过 ref 读最新引用），切语言不再触发重 match、不再静默清掉用户已手动编辑的 include / candidate。`AbortSignal` 全链路打通（浏览器 → `/api/match` route → `matchMany` → `appleFetch`，throttle sleep 也响应 abort），中断请求立即停止后端的 Apple Music 调用，不再浪费配额。`nextHandler.withErrorHandler` 对 `AbortError` 返回 499 并跳过日志噪音
 - [ ] 接下来 — 多 storefront 自动 retry（在 us 没匹配的曲自动 fallback hk/tw/jp）
 - [ ] 接下来 — `matchMany` 加并发（现在串行）
 - [ ] 接下来 — iOS Shortcut 导出（一键 add）
