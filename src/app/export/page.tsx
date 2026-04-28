@@ -37,9 +37,10 @@ export default function ExportPage() {
 }
 
 function ExportLoadingFallback() {
+  const t = useTranslations('export');
   return (
     <main style={{ padding: '40px 32px', maxWidth: 920, margin: '0 auto' }}>
-      <div style={{ color: 'var(--text-3)', fontSize: 13 }}>Loading…</div>
+      <div style={{ color: 'var(--text-3)', fontSize: 13 }}>{t('loading')}</div>
     </main>
   );
 }

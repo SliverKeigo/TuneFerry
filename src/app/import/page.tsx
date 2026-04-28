@@ -53,7 +53,7 @@ export default function ImportPage() {
           typeof (err as { status?: unknown }).status === 'number'
             ? ((err as { status: number }).status as number)
             : 0;
-        const message = err instanceof Error ? err.message : 'Failed to fetch playlist.';
+        const message = err instanceof Error ? err.message : t('fetchFailed');
         setError({ message, status });
       } finally {
         setLoading(false);

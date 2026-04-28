@@ -41,6 +41,15 @@ const CONFIDENCE_TONE: Record<MatchConfidence, PillTone> = {
   none: 'err',
 };
 
+const CONFIDENCE_KEY: Record<
+  MatchConfidence,
+  'confidenceHigh' | 'confidenceLow' | 'confidenceNone'
+> = {
+  high: 'confidenceHigh',
+  low: 'confidenceLow',
+  none: 'confidenceNone',
+};
+
 // `useSearchParams` requires a Suspense boundary in Next 14 App Router so
 // the page can statically prerender a fallback before client-side hydration.
 // `export default` is the wrapper; the real component lives below.
@@ -53,9 +62,10 @@ export default function MatchPage() {
 }
 
 function MatchLoadingFallback() {
+  const t = useTranslations('match');
   return (
     <main style={{ padding: '40px 32px', maxWidth: 920, margin: '0 auto' }}>
-      <div style={{ color: 'var(--text-3)', fontSize: 13 }}>Loading…</div>
+      <div style={{ color: 'var(--text-3)', fontSize: 13 }}>{t('loading')}</div>
     </main>
   );
 }
@@ -122,7 +132,7 @@ function MatchPageContent() {
         );
       } catch (err) {
         if (!cancelled) {
-          const msg = err instanceof Error ? err.message : 'Failed to match.';
+          const msg = err instanceof Error ? err.message : t('matchFailed');
           setError(msg);
           toast({ message: msg, tone: 'err' });
         }
@@ -133,7 +143,7 @@ function MatchPageContent() {
     return () => {
       cancelled = true;
     };
-  }, [playlist, storefront, toast]);
+  }, [playlist, storefront, toast, t]);
 
   // Counts for header / sticky bar.
   const counts = useMemo(() => {
@@ -277,7 +287,7 @@ function MatchPageContent() {
         }}
       >
         <div style={{ fontSize: 13, color: 'var(--text-2)' }}>
-          {t.rich('stickyIncluded', {
+          {t('stickyIncluded', {
             included: counts.included,
             matched: counts.high + counts.low,
             total: playlist.tracks.length,
@@ -424,7 +434,7 @@ function MatchRow({
 
       {/* Confidence + change */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <Pill tone={tone}>{result.confidence}</Pill>
+        <Pill tone={tone}>{t(CONFIDENCE_KEY[result.confidence])}</Pill>
         {(candidates.length > 0 || chosen !== null) && (
           <details style={{ position: 'relative' }}>
             <summary

@@ -1,6 +1,14 @@
 'use client';
 
-import { type ReactNode, createContext, useCallback, useContext, useEffect, useMemo } from 'react';
+import {
+  type ReactNode,
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
 import { useLocalStorage } from './useLocalStorage';
 
 export type ThemeTweak = 'dark' | 'light';
@@ -32,6 +40,36 @@ export const ACCENT_HUES: { value: number; label: string }[] = [
   { value: 340, label: 'Magenta' },
 ];
 
+// Allow-lists used to coerce hydrated localStorage values back into the union
+// types. A user (or a stale entry from a previous build that supported more
+// values) can leave invalid strings in `am.tweaks`; without this, indexed
+// lookups like `MESSAGES[tweaks.locale]` would yield `undefined` and crash
+// `NextIntlClientProvider`.
+const VALID_THEMES = new Set<ThemeTweak>(['dark', 'light']);
+const VALID_SURFACES = new Set<SurfaceTweak>(['glass', 'flat']);
+const VALID_NAVS = new Set<NavTweak>(['sidebar', 'topnav']);
+const VALID_LOCALES = new Set<Locale>(['en', 'zh']);
+const VALID_HUES = new Set<number>(ACCENT_HUES.map((h) => h.value));
+
+export function sanitizeTweaks(input: unknown): Tweaks {
+  const raw = (input && typeof input === 'object' ? input : {}) as Partial<Tweaks>;
+  const theme = VALID_THEMES.has(raw.theme as ThemeTweak)
+    ? (raw.theme as ThemeTweak)
+    : DEFAULT_TWEAKS.theme;
+  const surface = VALID_SURFACES.has(raw.surface as SurfaceTweak)
+    ? (raw.surface as SurfaceTweak)
+    : DEFAULT_TWEAKS.surface;
+  const nav = VALID_NAVS.has(raw.nav as NavTweak) ? (raw.nav as NavTweak) : DEFAULT_TWEAKS.nav;
+  const locale = VALID_LOCALES.has(raw.locale as Locale)
+    ? (raw.locale as Locale)
+    : DEFAULT_TWEAKS.locale;
+  const accentHue =
+    typeof raw.accentHue === 'number' && VALID_HUES.has(raw.accentHue)
+      ? raw.accentHue
+      : DEFAULT_TWEAKS.accentHue;
+  return { theme, surface, nav, accentHue, locale };
+}
+
 interface TweaksApi {
   tweaks: Tweaks;
   setTweak: <K extends keyof Tweaks>(key: K, value: Tweaks[K]) => void;
@@ -54,9 +92,23 @@ export function TweaksProvider({ children }: { children: ReactNode }) {
     'am.tweaks',
     DEFAULT_TWEAKS,
   );
-  // Merge against defaults so users with older localStorage entries (missing
-  // newly-introduced fields like `locale`) still get sensible values.
-  const tweaks = useMemo<Tweaks>(() => ({ ...DEFAULT_TWEAKS, ...stored }), [stored]);
+  // SSR / hydration: the server has no `localStorage`, so we render with
+  // `DEFAULT_TWEAKS` on the first client paint to match the server output.
+  // Once mounted we swap to the persisted (and sanitized) values. This costs a
+  // single render — but it eliminates React's "Hydration failed" warnings and
+  // the discarded SSR subtree that follows them.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Sanitize against the allow-lists so older or hand-edited localStorage
+  // entries (missing fields, removed enum values, wrong types) can't propagate
+  // into the rendered tree.
+  const tweaks = useMemo<Tweaks>(
+    () => (mounted ? sanitizeTweaks(stored) : DEFAULT_TWEAKS),
+    [mounted, stored],
+  );
 
   useEffect(() => {
     const root = document.documentElement;
@@ -68,7 +120,9 @@ export function TweaksProvider({ children }: { children: ReactNode }) {
 
   const setTweak = useCallback(
     <K extends keyof Tweaks>(key: K, value: Tweaks[K]) => {
-      setStored((prev) => ({ ...DEFAULT_TWEAKS, ...prev, [key]: value }));
+      // Re-sanitize on every write so a single legitimate setTweak call
+      // also scrubs any pre-existing dirty siblings out of localStorage.
+      setStored((prev) => ({ ...sanitizeTweaks(prev), [key]: value }));
     },
     [setStored],
   );

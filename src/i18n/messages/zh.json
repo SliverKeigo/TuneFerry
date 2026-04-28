@@ -17,10 +17,10 @@
     "step1Title": "导入",
     "step1Desc": "粘贴一个公开的 Spotify 链接，或登录后从你自己的歌单中选取。",
     "step2Title": "匹配",
-    "step2Desc": "ISRC 优先，模糊回退,可手动覆盖每条匹配置信度。",
+    "step2Desc": "对 Apple Music 曲库做模糊匹配，置信度分数可手动覆盖。",
     "step3Title": "导出",
     "step3Desc": "可点击的深链列表 —— 或一份适配 macOS Music 的 .m3u8 文件。",
-    "betaNote": "测试版。Apple Music 不允许程序化的「添加到资料库」操作,所以最后一步是深链列表 —— 你点,Apple Music 加。"
+    "betaNote": "测试版。Apple Music 不允许程序化的「添加到资料库」操作，所以最后一步是深链列表 —— 你点，Apple Music 加。"
   },
   "import": {
     "publicOnly": "仅支持公开歌单。如有需要请先在 Spotify 把歌单设为公开。",
@@ -33,6 +33,7 @@
     "scrapingHint": "正在抓取公开 embed 页面…",
     "errorNotFound": "歌单未找到或非公开 —— 请确认链接可被公开访问。",
     "errorBadGateway": "Spotify 改了 embed 页面 —— 请重试，或反馈给我们。",
+    "fetchFailed": "拉取歌单失败。",
     "loadedToast": "已加载「{name}」—— 共 {count} 首。",
     "tip1": "粘贴任意公开的 Spotify 歌单链接 —— 同时支持 <code>https://open.spotify.com/playlist/&lt;id&gt;?si=…</code> 和裸 ID。",
     "tip2": "每个歌单最多 <strong>100 首</strong>（Spotify embed 限制）。Spotify 的算法歌单（如 Today's Top Hits）封顶 50。",
@@ -50,7 +51,11 @@
     "matched": "{n} 已匹配",
     "low": "{n} 偏低",
     "none": "{n} 未匹配",
-    "matching": "正在把 {count} 首歌与 Apple Music ({storefront}) 做匹配…",
+    "confidenceHigh": "高",
+    "confidenceLow": "偏低",
+    "confidenceNone": "无",
+    "matchFailed": "匹配失败。",
+    "matching": "正在为 {count} 首歌曲在 Apple Music ({storefront}) 中查找匹配…",
     "noAppleMatch": "Apple Music 无匹配",
     "change": "更改",
     "noAlternatives": "暂无候选项。",
@@ -124,6 +129,10 @@
     "tokenIssuer": "签发方（团队）",
     "tokenLabel": "令牌",
     "tokenCopy": "复制令牌",
-    "tokenCopiedToast": "令牌已复制。"
+    "tokenCopiedToast": "令牌已复制。",
+    "tokenFetchFailed": "令牌拉取失败（{status}）。",
+    "tokenShapeInvalid": "令牌格式异常（缺少 payload）。",
+    "tokenLoadFailed": "令牌加载失败。",
+    "clipboardError": "当前浏览器不支持剪贴板。"
   }
 }

@@ -154,11 +154,11 @@ function AppleTokenSection() {
         const res = await fetch('/api/apple-music/developer-token');
         if (!res.ok) {
           const body = (await res.json().catch(() => null)) as ApiErrorBody | null;
-          throw new Error(body?.error?.message ?? `Token fetch failed (${res.status})`);
+          throw new Error(body?.error?.message ?? t('tokenFetchFailed', { status: res.status }));
         }
         const { developerToken } = (await res.json()) as { developerToken: string };
         const payloadPart = developerToken.split('.')[1];
-        if (!payloadPart) throw new Error('Token shape invalid (missing payload).');
+        if (!payloadPart) throw new Error(t('tokenShapeInvalid'));
         // Standard JWT payloads are URL-safe base64. atob accepts standard base64;
         // swap chars and pad before decoding.
         const b64 = payloadPart.replace(/-/g, '+').replace(/_/g, '/');
@@ -167,7 +167,7 @@ function AppleTokenSection() {
         if (!cancelled) setState({ token: developerToken, payload });
       } catch (err) {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : 'Failed to load token.');
+          setError(err instanceof Error ? err.message : t('tokenLoadFailed'));
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -176,7 +176,7 @@ function AppleTokenSection() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [t]);
 
   const expiry = useMemo(() => {
     if (!state?.payload.exp) return null;
@@ -205,7 +205,7 @@ function AppleTokenSection() {
       await navigator.clipboard.writeText(state.token);
       toast({ message: t('tokenCopiedToast'), tone: 'ok' });
     } catch {
-      toast({ message: 'Clipboard unavailable in this browser.', tone: 'err' });
+      toast({ message: t('clipboardError'), tone: 'err' });
     }
   }, [state, toast, t]);
 

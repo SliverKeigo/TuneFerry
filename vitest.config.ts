@@ -13,13 +13,18 @@ export default defineConfig({
     },
   },
   test: {
-    include: ['src/lib/**/*.test.ts', 'src/app/api/**/*.test.ts'],
+    include: ['src/lib/**/*.test.ts', 'src/app/api/**/*.test.ts', 'src/hooks/**/*.test.ts'],
     environment: 'node',
     passWithNoTests: true,
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html'],
-      include: ['src/lib/**/*.ts', 'src/app/api/**/*.ts'],
+      include: [
+        'src/lib/**/*.ts',
+        'src/app/api/**/*.ts',
+        'src/hooks/**/*.ts',
+        'src/hooks/**/*.tsx',
+      ],
       exclude: ['**/*.test.ts', '**/types/**'],
     },
   },
