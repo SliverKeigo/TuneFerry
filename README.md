@@ -27,10 +27,11 @@ Public Spotify playlist URL
 ## Tech Stack
 
 - **Framework:** Next.js 14 (App Router) + React 18 + TypeScript. Single-process `next dev` on :3000.
-- **Styling:** OKLCH CSS-variable token system + inline styles + a small `primitives.tsx` component library. No UI framework, no CSS Modules.
+- **Styling:** OKLCH CSS-variable token system + inline styles + a small `primitives.tsx` component library. No UI framework, no CSS Modules. Responsive layout via utility classes in `globals.css` with a single 820px breakpoint.
+- **i18n:** [next-intl](https://next-intl-docs.vercel.app/) 4.x, client-only mode (no URL routing). EN / ZH messages in `src/i18n/messages/`. Locale switches live on the existing tweaks store (Settings → Appearance → Language).
 - **Spotify:** Embed-page scraping (`https://open.spotify.com/embed/playlist/<id>`). Pulls the SSR'd `__NEXT_DATA__` JSON, walks to the track list. **No OAuth, no API keys, no env vars.**
 - **Apple Music:** Catalog search via `amp-api.music.apple.com` with a WebPlay-scraped Developer Token. Fuzzy matching written from scratch (token Jaccard + duration penalty). No `fuse.js` / `string-similarity` — ~30 lines.
-- **Quality:** Biome (lint + format + import sort), TypeScript strict, Vitest (59 tests across 7 files — covers `src/lib/**` + `src/app/api/**` route handlers), husky pre-commit hook.
+- **Quality:** Biome (lint + format + import sort), TypeScript strict, Vitest (67 tests across 8 files — covers `src/lib/**`, `src/app/api/**` route handlers, and pure helpers under `src/hooks/**`), husky pre-commit hook.
 
 ## Project Layout
 
@@ -54,7 +55,10 @@ AM-API/
 │   │       │   └── playlist/route.ts        # GET — public playlist via embed scrape
 │   │       └── match/route.ts                # POST — Apple catalog fuzzy match
 │   ├── components/                  # primitives, icons, AppShell, Sidebar, TopNav, MobileNav, TweaksPanel, Providers
-│   ├── hooks/                       # useLocalStorage, useStorefront, useTweaks
+│   ├── hooks/                       # useLocalStorage, useStorefront, useTweaks (+ sanitizeTweaks unit tests)
+│   ├── i18n/
+│   │   ├── I18nProvider.tsx         # Picks messages from useTweaks().tweaks.locale
+│   │   └── messages/{en,zh}.json    # Per-page namespaces (nav/home/import/match/export/settings)
 │   ├── api/appleMusicApi.ts         # client-side fetch wrapper for /api/apple-music/*
 │   ├── types/appleMusic.ts          # frontend Apple types
 │   └── lib/
@@ -153,7 +157,7 @@ npm run clean          # rm .next + coverage
 
 - **Biome** — lint + format + import sort. Config: [`biome.json`](./biome.json).
 - **TypeScript strict** across all of `src/`. Path alias `@/*` → `./src/*`.
-- **Vitest 2** covers `src/lib/**` and `src/app/api/**` route handlers — **59 tests across 7 files** as of Phase 19. Vitest mirrors tsconfig's `@/*` → `./src/*` alias in `vitest.config.ts` so route tests can `import` the same way Next.js does.
+- **Vitest 2** covers `src/lib/**`, `src/app/api/**` route handlers, and pure hook helpers under `src/hooks/**` — **67 tests across 8 files** as of Phase 21. Vitest mirrors tsconfig's `@/*` → `./src/*` alias in `vitest.config.ts` so route tests can `import` the same way Next.js does.
 - **Pre-commit gate**: `.husky/pre-commit` runs `npm run check` + `npm run typecheck` on every commit. Tests run in `validate` (CI).
 - **No backdoor**: don't `git commit --no-verify` unless really stuck.
 
@@ -165,11 +169,14 @@ npm run clean          # rm .next + coverage
 - [x] Phase 17 — Pivot to TuneFerry: Spotify Web API + OAuth + ISRC matching wizard (subsequently rebuilt — see Phase 18)
 - [x] Phase 18 — **Drop Spotify Web API entirely** (Premium-locked since 2024). Replaced with embed-page scraping for public playlists. Removed all OAuth, removed ISRC tier, simplified `/import` and `/settings`. Net −1500 / +400 lines, zero subscriptions
 - [x] Phase 19 — Test coverage backfill: route handler integration tests for `/api/spotify/playlist` and `/api/match`, plus unit tests for `pickQuery`/`pickHeader`/`pickInt`, `findFirstByQuery`, and `getDeveloperToken`. Added Vitest `@/*` alias mirroring tsconfig. **34 → 59 tests**
+- [x] Phase 20 — **i18n via next-intl** (EN / ZH, no URL routing). Locale persisted on the `useTweaks` store, `<html lang>` mirrored, full message bundles for nav + all five pages. Added `sanitizeTweaks` (allow-list per enum field, including the new `locale`) plus a `mounted` gate in `TweaksProvider` to eliminate SSR hydration warnings. Sidebar widened to 268px, TopNav grown to 64px and centered against a 1280px column. **+8 tests for the sanitizer / self-heal write path**
+- [x] Phase 21 — **Responsive layout, 820px breakpoint** (matches AppShell's mobile media query). All page `<main>`, the Match row, the sticky bar, the Export 2-col grid, PageHeader, SectionHeader, and Settings/Tweaks rows route through utility classes in `globals.css` so `@media` rules can cascade. Mobile (≤820px) collapses 3-card / 5-col / 2-col grids to a single column, stacks PageHeader right elements, narrows the candidate popover, lifts the sticky bar above MobileNav, and replaces a hardcoded oklch with `var(--bg-2)` so light theme no longer flashes dark. Verified end-to-end with Playwright across 1440 / 768 / 375 viewports
 - [ ] Next — Per-storefront retry for tracks that miss in `us` (auto-fallback to `hk`/`tw`/`jp`)
 - [ ] Next — Concurrency in `matchMany` for large playlists (currently serial)
 - [ ] Next — iOS Shortcut export (one-tap add via Shortcuts app)
 - [ ] Next — Client-side React component tests (jsdom + @testing-library/react)
 - [ ] Next — Persist migration history (so users can resume across sessions)
+- [ ] Next — Cookie-driven SSR locale + theme to fully eliminate the post-hydration default→user-value flicker
 
 ## Known Limitations (MVP)
 

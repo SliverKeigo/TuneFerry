@@ -28,7 +28,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - `npm run check` = Biome 全仓
 - `npm run typecheck` = tsc --noEmit
-- `npm run test` = Vitest（覆盖 `src/lib/**` 和 `src/app/api/**`，Phase 19 起 59 测试 7 文件）
+- `npm run test` = Vitest（覆盖 `src/lib/**`、`src/app/api/**`、`src/hooks/**`，当前 67 测试 8 文件）
 - `npm run validate` = 上面三个并行
 - `.husky/pre-commit` 每次 commit 跑 `check` + `typecheck`（test 不进 gate）
 - Commit 失败时**不要**建议 `--no-verify`，先 `npm run check:fix` 再手修
@@ -47,14 +47,38 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **不要用 CSS Modules**。所有样式走两条路：
 
-1. **全局 token / 基础类**：`src/app/globals.css` 定义 OKLCH CSS 变量（`--accent`、`--panel`、`--text`、`--hairline` 等）和基础类（`.panel`、`.kbd`、`.input-native`、`.app-bg`、`.page-enter`）
+1. **全局 token / 工具类**：`src/app/globals.css` 定义 OKLCH CSS 变量（`--accent`、`--panel`、`--text`、`--hairline` 等）和工具类
+   - **基础**：`.panel`、`.kbd`、`.input-native`、`.app-bg`、`.page-enter`
+   - **响应式 layout**（820px 断点，与 AppShell mobile 切换同步）：
+     - `.page-main` + 变体（`--home / --import / --form / --match / --export / --settings`）替代每页 `<main>` 的 padding/maxWidth
+     - `.page-header` / `.section-header`（mobile 下 right 区下沉单列）
+     - `.cards-3`（Home 三卡 → mobile 单列）
+     - `.match-row` / `.match-sticky-bar` / `.match-candidate-popover`（Match 行折叠 + sticky bar 加 `bottom: 64px` 让位 MobileNav）
+     - `.export-grid`（Export 双列 → mobile 单列）
+     - `.settings-row` / `.settings-row--narrow`（Settings/TweaksPanel Row 单列堆叠）
+   - **新增内联样式如果有 padding / grid / flex 这种 layout 关键字段，优先看能不能落到 utility class** —— inline style 优先级高于 class，写到 inline 就让 `@media` rule 失效。Visual chrome（color/border/shadow）保留 inline 没问题。
 2. **组件内 inline styles**：`style={{ ... }}` 写在组件里，读 CSS 变量
 
 **组件库在 `src/components/primitives.tsx`** —— 写新页面时**优先复用**（Button、Pill、StatusDot、AddButton、Segmented、PageHeader、SectionHeader、StatCard、Artwork、ToastProvider + useToast 等）。图标统一从 `src/components/icons.tsx` namespace import：`import * as Icon from '@/components/icons'` 然后 `<Icon.Search size={18} />`。
 
 **Client components**：任何用 React hooks、浏览器 API 或 `onClick`/`onChange` 的组件都必须 `'use client';` 起头。
 
-**主题/外观可切**：`useTweaks()` 管 theme (dark/light) / surface (glass/flat) / nav (sidebar/topnav) / accentHue，持久化到 `localStorage`，镜像到 `<html>` 的 `data-*` 属性和 `--accent-h`。`<TweaksPanel />` 在 Settings 页。
+**主题 / 外观 / 语言可切**：`useTweaks()` 管 theme (dark/light) / surface (glass/flat) / nav (sidebar/topnav) / accentHue / locale (en/zh)，持久化到 `localStorage['am.tweaks']`，镜像到 `<html>` 的 `data-*` 属性、`lang` 属性和 `--accent-h`。`<TweaksPanel />` 在 Settings 页。
+
+- **持久化值统一过 `sanitizeTweaks()`** —— 所有枚举字段（含 accentHue 数字白名单）用 allow-list 强校验，hydrated 出非法值就 fallback 默认。这是为了防止旧 / 手改的 localStorage 让 `MESSAGES[tweaks.locale]` 等 indexed lookup 拿到 undefined 把整棵 tree 炸掉。`setTweak` 写入路径同样跑一次 sanitize 自我治愈。新增枚举字段时务必同步更新 `VALID_*` Set。
+- **SSR hydration**：`TweaksProvider` 用 `mounted` gate，第一次 client render 强制走 `DEFAULT_TWEAKS` 跟 SSR 输出一致，`useEffect` 后才读 localStorage。这是为了消除 React hydration 警告。视觉上仍有一次默认→用户值的快速切换，可接受 —— 想彻底消除需要把 locale/theme 持久化到 cookie 让 server `RootLayout` 直接读，目前不做。
+
+## i18n 约定
+
+**唯一库：next-intl 4.x，client-only mode（不带 i18n routing）**。
+
+- Messages = `src/i18n/messages/{en,zh}.json`，结构按 page 域分组（`nav` / `home` / `import` / `match` / `export` / `settings`）
+- `<I18nProvider>` 在 `src/i18n/I18nProvider.tsx`，根据 `useTweaks().tweaks.locale` 选 messages，挂在 `Providers.tsx` 的 `TweaksProvider → I18nProvider → ToastProvider → AppShell` 链上
+- 组件内：`const t = useTranslations('namespace')`；带占位符用 `t('key', { count })`；带 React 节点用 `t.rich('key', { code: (chunks) => <code>{chunks}</code> })`
+- **不要在 messages JSON 写 HTML entities**（`&lt;` / `&gt;`）—— next-intl 不解码，会按字面渲染。占位符用 `[id]` 这类 ASCII。`<code>` 等长字符串记得加 `wordBreak: 'break-all'`，否则窄屏溢出
+- **不翻 API contract message**：API route 返回的 `error.message`、JWT payload 字段、storefront 代码（`us`/`gb`）都是数据契约 / 数据本身，保留英文。前端只翻 UI 文案
+- 加新文案先在 `en.json` 加 key、立刻同步 `zh.json`（结构必须一一对应，否则 next-intl 在缺失语言下静默 fallback 到 key 字符串）
+- Locale 切换在 Settings → Appearance → Language（English / 中文）
 
 ## Spotify 集成约定
 
@@ -97,13 +121,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 测试
 
-- **Vitest 2.x** 覆盖 `src/lib/**` 和 `src/app/api/**` route handlers（Node environment）。测试文件和源文件并排
+- **Vitest 2.x** 覆盖 `src/lib/**`、`src/app/api/**` route handlers、`src/hooks/**` 纯函数（Node environment）。测试文件和源文件并排
 - **`vitest.config.ts` 必须 mirror `tsconfig.json` 的 `@/*` → `./src/*` 别名**（route handler 用 `@/lib/...`，否则 Vitest 解析不到）。新增任何 path alias 时两边都要同步
 - 常用命令：`npm test` / `npm run test:watch` / `npm run test:coverage`
 - Route handler integration tests 用 `vi.mock` 替换底层 service，只测 body 解析 + envelope 形状（参考 `src/app/api/match/route.test.ts`）
 - 模块级 frozen state（如 `developerTokenService` 读 `env`）用 `vi.doMock + vi.resetModules + dynamic import` 隔离 case
-- **前端 React 组件测试尚未配置** —— 需要 `jsdom` + `@testing-library/react`
-- 写新功能尽量同步加 `*.test.ts`。纯函数（matcher、parsers、validators）优先；route handler 加 integration test 锁定 envelope
+- **前端 React 组件测试尚未配置** —— 需要 `jsdom` + `@testing-library/react`。但 hook 内的纯函数（如 `sanitizeTweaks`）可以 export 出来直接 Node env 测试，免装 jsdom（参考 `src/hooks/useTweaks.test.ts`）
+- 写新功能尽量同步加 `*.test.ts`。纯函数（matcher、parsers、validators、sanitizer）优先；route handler 加 integration test 锁定 envelope
 
 ## 文档结构
 
