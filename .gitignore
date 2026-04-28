@@ -48,3 +48,6 @@ docs
 # ui design
 ui-design
 .vercel
+
+# Next.js build cache (next-env.d.ts is intentionally tracked)
+.next/
