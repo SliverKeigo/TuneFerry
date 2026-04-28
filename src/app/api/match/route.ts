@@ -52,6 +52,9 @@ function parseBody(raw: unknown): MatchRequestBody {
 export const POST = withErrorHandler(async (req) => {
   const raw = (await req.json().catch(() => null)) as unknown;
   const { tracks, storefront } = parseBody(raw);
-  const matches = await matchMany(tracks, storefront);
+  // `req.signal` aborts when the client disconnects (e.g. user switched
+  // storefront mid-flight). Forwarding it cancels in-flight Apple Music
+  // calls so we don't burn token quota on a result no one is waiting for.
+  const matches = await matchMany(tracks, storefront, req.signal);
   return NextResponse.json({ matches });
 });

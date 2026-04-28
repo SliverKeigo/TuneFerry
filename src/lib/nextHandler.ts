@@ -19,6 +19,13 @@ export function withErrorHandler(handler: Handler): Handler {
           { status: err.status },
         );
       }
+      // Client aborted mid-request (typically `request.signal` fires after
+      // the user closes the tab or our React effect cleans up). The
+      // connection is already gone, so no envelope can land — just return a
+      // best-effort 499 (nginx convention) and skip the noisy unhandled log.
+      if (err instanceof Error && err.name === 'AbortError') {
+        return new NextResponse(null, { status: 499 });
+      }
       console.error('[api] unhandled', err);
       const message = err instanceof Error ? err.message : 'Internal server error';
       return NextResponse.json({ error: { message, status: 500 } }, { status: 500 });

@@ -31,6 +31,13 @@ interface RequestOptions {
   query?: Record<string, string | number | undefined>;
   musicUserToken?: string;
   body?: unknown;
+  /**
+   * Forwarded to the underlying `fetch`. When the upstream caller (e.g. a
+   * `/api/match` request whose client disconnected) cancels, in-flight Apple
+   * Music calls abort instead of running to completion and burning the
+   * developer-token quota.
+   */
+  signal?: AbortSignal;
 }
 
 async function throwOnHttpError(response: Response, contextMessage: string): Promise<void> {
@@ -72,6 +79,7 @@ async function appleFetch<T>(path: string, opts: RequestOptions = {}): Promise<T
     method: opts.method ?? 'GET',
     headers,
     body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
+    signal: opts.signal,
   });
 
   await throwOnHttpError(response, 'Apple Music API error');
@@ -86,6 +94,7 @@ export async function searchCatalog(params: {
   storefront?: string;
   types?: string;
   limit?: number;
+  signal?: AbortSignal;
 }): Promise<AppleMusicSearchResponse> {
   const storefront = params.storefront?.trim() || 'us';
   const types = params.types?.trim() || 'songs,albums,artists,playlists';
@@ -95,6 +104,7 @@ export async function searchCatalog(params: {
       types,
       limit: params.limit ?? 25,
     },
+    signal: params.signal,
   });
 }
 
@@ -106,12 +116,14 @@ export async function findFirstByQuery(params: {
   query: string;
   storefront?: string;
   limit?: number;
+  signal?: AbortSignal;
 }): Promise<AppleMusicResource<AppleMusicSongAttributes>[]> {
   const result = await searchCatalog({
     term: params.query,
     storefront: params.storefront,
     types: 'songs',
     limit: params.limit ?? 10,
+    signal: params.signal,
   });
   // searchCatalog returns generic AppleMusicResource (Record<string, unknown> attrs);
   // when we restrict types=songs the data is necessarily song resources.

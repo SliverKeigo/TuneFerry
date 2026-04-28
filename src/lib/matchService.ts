@@ -14,6 +14,12 @@ export type MatchConfidence = 'high' | 'low' | 'none';
 export interface MatchInput {
   spotify: SpotifyTrack;
   storefront: string;
+  /**
+   * Aborts the underlying Apple Music search. Lets `matchMany` short-circuit
+   * the rest of a 100-track playlist when the client disconnects, instead of
+   * burning developer-token quota on results nobody is waiting for.
+   */
+  signal?: AbortSignal;
 }
 
 export interface AppleSongLite {
@@ -178,14 +184,18 @@ function toAppleSongLite(
  * whole `matchMany` run for a 91-track playlist.
  */
 export async function matchOne(input: MatchInput): Promise<MatchResult> {
-  const { spotify, storefront } = input;
+  const { spotify, storefront, signal } = input;
+  signal?.throwIfAborted();
 
   const primaryArtist = spotify.artists[0] ?? '';
   const term = `${spotify.name} ${primaryArtist}`.trim();
   let songs: AppleMusicResource<AppleMusicSongAttributes>[];
   try {
-    songs = await findFirstByQuery({ query: term, storefront, limit: SEARCH_LIMIT });
+    songs = await findFirstByQuery({ query: term, storefront, limit: SEARCH_LIMIT, signal });
   } catch (err) {
+    // Re-throw cancellation so `matchMany` can stop, instead of swallowing it
+    // as just another upstream error.
+    if (err instanceof Error && err.name === 'AbortError') throw err;
     return {
       spotify,
       apple: null,
@@ -253,24 +263,48 @@ export async function matchOne(input: MatchInput): Promise<MatchResult> {
  * in ~11s. Bump if 429s come back. */
 const MATCH_THROTTLE_MS = 120;
 
-const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
+/**
+ * Sleep that wakes early on abort. Without this the throttle delay between
+ * tracks would still tick out fully even after the client disconnected.
+ */
+const sleep = (ms: number, signal?: AbortSignal): Promise<void> =>
+  new Promise((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(signal.reason);
+      return;
+    }
+    const timer = setTimeout(() => {
+      signal?.removeEventListener('abort', onAbort);
+      resolve();
+    }, ms);
+    const onAbort = () => {
+      clearTimeout(timer);
+      reject(signal?.reason);
+    };
+    signal?.addEventListener('abort', onAbort, { once: true });
+  });
 
 /**
  * Run `matchOne` over an array of tracks serially with a small inter-request
  * delay. Apple's catalog endpoint rate-limits us if we sustain more than
  * ~50 hits with no gap. `matchOne` itself absorbs upstream errors so one
  * 429 won't fail the whole batch.
+ *
+ * Pass `signal` to abort mid-run when the upstream caller disappears (e.g.
+ * the user switched storefront and the in-flight request was cancelled).
  */
 export async function matchMany(
   tracks: SpotifyTrack[],
   storefront: string,
+  signal?: AbortSignal,
 ): Promise<MatchResult[]> {
   const results: MatchResult[] = [];
   for (let i = 0; i < tracks.length; i++) {
     const t = tracks[i];
     if (!t) continue;
-    if (i > 0) await sleep(MATCH_THROTTLE_MS);
-    results.push(await matchOne({ spotify: t, storefront }));
+    if (i > 0) await sleep(MATCH_THROTTLE_MS, signal);
+    signal?.throwIfAborted();
+    results.push(await matchOne({ spotify: t, storefront, signal }));
   }
   return results;
 }

@@ -131,6 +131,7 @@ function MatchPageContent() {
   // to grab the *current* translator without joining the dependency set.
   useEffect(() => {
     if (!playlist) return;
+    const controller = new AbortController();
     let cancelled = false;
     (async () => {
       setMatching(true);
@@ -140,6 +141,10 @@ function MatchPageContent() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ tracks: playlist.tracks, storefront }),
+          // Aborts the request when the effect cleans up (storefront
+          // change, navigation, unmount). Server-side `req.signal` fires
+          // and `matchMany` short-circuits — no more wasted Apple calls.
+          signal: controller.signal,
         });
         if (!res.ok) {
           const body = (await res.json().catch(() => null)) as ApiErrorBody | null;
@@ -155,6 +160,8 @@ function MatchPageContent() {
           })),
         );
       } catch (err) {
+        // Aborts are expected (cleanup path); don't surface them as errors.
+        if (controller.signal.aborted) return;
         if (!cancelled) {
           const next: MatchError =
             err instanceof Error && err.message
@@ -170,6 +177,7 @@ function MatchPageContent() {
     })();
     return () => {
       cancelled = true;
+      controller.abort();
     };
   }, [playlist, storefront, toast]);
 

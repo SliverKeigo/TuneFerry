@@ -97,7 +97,10 @@ describe('POST /api/match', () => {
     ]);
     const res = await POST(postWith({ tracks: [validTrack], storefront: 'us' }));
     expect(res.status).toBe(200);
-    expect(matchManyMock).toHaveBeenCalledWith([validTrack], 'us');
+    // Third arg is the AbortSignal forwarded from `req.signal`. We don't
+    // construct one in the test harness, so just assert the call shape and
+    // ignore signal identity.
+    expect(matchManyMock).toHaveBeenCalledWith([validTrack], 'us', expect.anything());
     const body = (await res.json()) as { matches: Array<{ confidence: string }> };
     expect(body.matches).toHaveLength(1);
     expect(body.matches[0]?.confidence).toBe('high');
