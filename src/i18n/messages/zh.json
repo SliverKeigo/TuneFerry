@@ -134,5 +134,16 @@
     "tokenShapeInvalid": "令牌格式异常（缺少 payload）。",
     "tokenLoadFailed": "令牌加载失败。",
     "clipboardError": "当前浏览器不支持剪贴板。"
+  },
+  "error": {
+    "title": "出错了",
+    "desc": "页面遇到一个意外错误。可以重试，或回到首页。",
+    "tryAgain": "重试",
+    "goHome": "回到首页"
+  },
+  "notFound": {
+    "title": "页面未找到",
+    "desc": "你要找的页面不存在（或已迁移）。",
+    "goHome": "回到首页"
   }
 }
