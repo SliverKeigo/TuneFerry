@@ -76,34 +76,6 @@ AM-API/
 └── vitest.config.ts
 ```
 
-## 配置
-
-### Spotify
-
-**啥也不用**。无 env 变量、无 app 注册、无 OAuth。TuneFerry 从 `https://open.spotify.com/embed/playlist/<id>` 读公开 playlist 数据 —— 这是 Spotify 给所有访问 URL 的人都返回同一份 SSR 数据，第三方 reader 也能用。
-
-**限制**：
-- **公开 playlist 才行**。先在 Spotify 把 playlist 设公开
-- **每个 playlist 最多 100 首**。embed 截断更长的。Spotify 算法 playlist（`37i9...` ID，比如 *Today's Top Hits*、*Top 50*）上限是 50 首
-- **没有"我的 playlist 列表"**。每次迁移从粘 URL 开始
-
-### Apple Music Developer Token（必填）
-
-**两条路：**
-
-**(A) WebPlay 刮取 —— 免费，非官方，约 72 天过期**
-- 请求 `https://beta.music.apple.com`，找到 `index-legacy-*.js` 文件名，请求那个 JS，正则匹配 `eyJh...` JWT
-- 贴进 `APPLE_MUSIC_DEVELOPER_TOKEN`
-- Token 的 `root_https_origin: ["apple.com"]` claim 强制要求请求带 Origin。后端自动在每次 Apple 调用上加 `Origin: https://music.apple.com` + 桌面 UA（有 `appleMusicService.test.ts` 锁契约）
-- API base：`amp-api.music.apple.com/v1`（Apple Web player 的 endpoint，和该 token 成对）
-
-**(B) Apple Developer Program —— $99/年，官方，6 个月有效期**
-- 创建 Media Services key（勾 MusicKit），下载 `.p8`
-- 预签 token 贴进 `APPLE_MUSIC_DEVELOPER_TOKEN`
-- 或设 `APPLE_TEAM_ID` + `APPLE_KEY_ID` + `APPLE_PRIVATE_KEY`（inline PEM），后端自签
-
-完整字段见 [`.env.example`](./.env.example)。
-
 ## 快速开始
 
 ```bash
@@ -178,12 +150,3 @@ npm run clean          # 清 .next + coverage
 - [ ] 接下来 — 迁移历史持久化（用户跨 session 能继续）
 - [ ] 接下来 — locale / theme 持久化到 cookie，让 server `RootLayout` 直接读，彻底消除 hydration 后默认值→用户值的瞬时切换
 
-## 已知限制 (MVP)
-
-- **公开 playlist 才行，≤100 首**。Spotify embed 是唯一数据源；私有 playlist 需要 Web API（已被 Premium 锁），embed 对大 playlist 截断。
-- **没有 ISRC = 只能 fuzzy 匹配**。embed 不暴露 ISRC，所以不能用 ID 精准匹配。流行曲一般 'high' 置信度；冷门 / 区域独占 / 改名严重的曲可能落到 'low' 或 'none'。用户可以在 `/match` 手动从候选里挑。
-- **Storefront 敏感**。匹配率严重依赖该曲在所选 Apple Music storefront 是否存在。中文歌经常在 `us` 没结果但 `hk` / `tw` 有。可在 Settings 切 storefront 重试。
-- **Apple Music 没有给非订阅开发者用的"add to library" API**。deep link 是唯一通用路径：iOS 用户逐个点链接；macOS Music app 也可 import `.m3u8`。
-- **WebPlay 刮取 token（Apple + Spotify embed 都是）非官方**。任何一边改前端 bundle 都可能失效。生产用户建议走付费替代。
-- **`matchMany` 串行**实现 —— ≤100 首约 3 秒。如果觉得慢加并发。
-- **本地 HTTP 代理**（Clash、Surge）会拦 `curl localhost:3000` —— 用 `--noproxy '*'` 或 `unset http_proxy https_proxy`。

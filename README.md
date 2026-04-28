@@ -76,34 +76,6 @@ AM-API/
 └── vitest.config.ts
 ```
 
-## Configuration
-
-### Spotify
-
-**Nothing.** No env vars, no app registration, no OAuth setup. TuneFerry reads public playlist data from `https://open.spotify.com/embed/playlist/<id>`. The embed page returns server-rendered JSON for any visitor — Spotify uses it for `oembed` previews, third-party readers can use it too.
-
-**Limitations**:
-- **Public playlists only.** Set the playlist to public on Spotify first if needed.
-- **Up to 100 tracks per playlist.** Embed truncates beyond that. Spotify-curated algorithmic playlists (`37i9...` IDs like *Today's Top Hits*, *Top 50*) cap at 50.
-- **No "your playlists" picker.** Each migration starts from a URL paste.
-
-### Apple Music Developer Token (required)
-
-**Two paths:**
-
-**(A) WebPlay scrape — free, unofficial, ~72-day expiry**
-- Fetch `https://beta.music.apple.com`, find `index-legacy-*.js` filename, fetch that JS, regex out the `eyJh...` JWT
-- Paste into `APPLE_MUSIC_DEVELOPER_TOKEN`
-- Token has `root_https_origin: ["apple.com"]`. The backend automatically sends `Origin: https://music.apple.com` + a desktop UA on every Apple call (locked by tests in `appleMusicService.test.ts`)
-- API base: `amp-api.music.apple.com/v1` (Apple Web player's endpoint, paired with this token)
-
-**(B) Apple Developer Program — $99/yr, official, 6-month token**
-- Create a Media Services key with MusicKit, download `.p8`
-- Either pre-sign a token and paste into `APPLE_MUSIC_DEVELOPER_TOKEN`
-- Or set `APPLE_TEAM_ID` + `APPLE_KEY_ID` + `APPLE_PRIVATE_KEY` (inline PEM) and the server self-signs
-
-See [`.env.example`](./.env.example) for the full list.
-
 ## Quick Start
 
 ```bash
@@ -178,12 +150,3 @@ npm run clean          # rm .next + coverage
 - [ ] Next — Persist migration history (so users can resume across sessions)
 - [ ] Next — Cookie-driven SSR locale + theme to fully eliminate the post-hydration default→user-value flicker
 
-## Known Limitations (MVP)
-
-- **Public playlists only, ≤100 tracks.** Spotify's embed page is the data source; private playlists require Web API access (Premium-locked) and embed truncates large playlists.
-- **No ISRC = fuzzy-only matching.** Embed doesn't expose ISRC, so we can't do exact-by-identifier matches. Most popular tracks still resolve at `'high'` confidence; obscure / regional / heavily-renamed tracks may end up `'low'` or `'none'`. Users can manually pick from candidate lists in `/match`.
-- **Storefront sensitivity.** Match rate depends heavily on whether the track exists in the chosen Apple Music storefront. Chinese songs frequently miss in `us` but hit in `hk` / `tw`. Consider switching storefront in Settings before retrying.
-- **Apple Music has no public "add to library" API for non-subscribers**; the deep link path is the only universal flow. iOS users tap each link; macOS Music app can also import the `.m3u8`.
-- **WebPlay-scraped tokens (both Apple & Spotify embed) are unofficial.** Either side can break the path by changing their front-end bundle. Production users should consider paid alternatives.
-- **`matchMany` is serial** — fine for ≤100 tracks; ~3s typical. Add concurrency if it ever feels slow.
-- **Local HTTP proxies** (Clash, Surge etc.) can intercept `curl localhost:3000` — use `--noproxy '*'` or `unset http_proxy https_proxy`.
