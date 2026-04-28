@@ -28,7 +28,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - `npm run check` = Biome 全仓
 - `npm run typecheck` = tsc --noEmit
-- `npm run test` = Vitest（覆盖 `src/lib/**`）
+- `npm run test` = Vitest（覆盖 `src/lib/**` 和 `src/app/api/**`，Phase 19 起 59 测试 7 文件）
 - `npm run validate` = 上面三个并行
 - `.husky/pre-commit` 每次 commit 跑 `check` + `typecheck`（test 不进 gate）
 - Commit 失败时**不要**建议 `--no-verify`，先 `npm run check:fix` 再手修
@@ -97,10 +97,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 测试
 
-- **Vitest 2.x** 覆盖 `src/lib/**`（Node environment）。测试文件和源文件并排
+- **Vitest 2.x** 覆盖 `src/lib/**` 和 `src/app/api/**` route handlers（Node environment）。测试文件和源文件并排
+- **`vitest.config.ts` 必须 mirror `tsconfig.json` 的 `@/*` → `./src/*` 别名**（route handler 用 `@/lib/...`，否则 Vitest 解析不到）。新增任何 path alias 时两边都要同步
 - 常用命令：`npm test` / `npm run test:watch` / `npm run test:coverage`
+- Route handler integration tests 用 `vi.mock` 替换底层 service，只测 body 解析 + envelope 形状（参考 `src/app/api/match/route.test.ts`）
+- 模块级 frozen state（如 `developerTokenService` 读 `env`）用 `vi.doMock + vi.resetModules + dynamic import` 隔离 case
 - **前端 React 组件测试尚未配置** —— 需要 `jsdom` + `@testing-library/react`
-- 写新功能尽量同步加 `*.test.ts`。纯函数（matcher、parsers、validators）优先
+- 写新功能尽量同步加 `*.test.ts`。纯函数（matcher、parsers、validators）优先；route handler 加 integration test 锁定 envelope
 
 ## 文档结构
 

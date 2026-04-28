@@ -30,7 +30,7 @@
 - **样式：** OKLCH CSS 变量 token + inline styles + 小型 `primitives.tsx` 组件库。不引 UI 框架，不用 CSS Modules。
 - **Spotify：** Embed 页面爬取（`https://open.spotify.com/embed/playlist/<id>`）。从 SSR 嵌入的 `__NEXT_DATA__` JSON 里走到 trackList。**无 OAuth、无 API key、无 env 配置**。
 - **Apple Music：** 用 WebPlay-scraped Developer Token 调 `amp-api.music.apple.com`。匹配算法手写（token Jaccard + duration 惩罚），约 30 行。不引 `fuse.js` / `string-similarity`。
-- **质量：** Biome（lint + format + import 排序）、TypeScript strict、Vitest（34 个测试）、husky pre-commit hook。
+- **质量：** Biome（lint + format + import 排序）、TypeScript strict、Vitest（**59 个测试，7 个文件** —— 覆盖 `src/lib/**` 和 `src/app/api/**` route handlers）、husky pre-commit hook。
 
 ## 项目结构
 
@@ -51,23 +51,20 @@ AM-API/
 │   │       │   ├── developer-token/route.ts
 │   │       │   └── catalog/search/route.ts
 │   │       ├── spotify/
-│   │       │   ├── auth/{login,callback,logout}/route.ts
-│   │       │   ├── playlist/route.ts        # 公开
-│   │       │   └── me/{playlists,playlist}/route.ts  # 私有
-│   │       └── match/route.ts
+│   │       │   └── playlist/route.ts        # GET — 公开 playlist via embed scrape
+│   │       └── match/route.ts                # POST — Apple catalog fuzzy 匹配
 │   ├── components/                  # primitives、icons、AppShell、Sidebar、TopNav、MobileNav、TweaksPanel、Providers
 │   ├── hooks/                       # useLocalStorage、useStorefront、useTweaks
 │   ├── api/appleMusicApi.ts         # 客户端 fetch 封装
 │   ├── types/appleMusic.ts          # 前端 Apple 类型
 │   └── lib/
-│       ├── appleMusicService.ts     # searchCatalog + findByIsrc + findFirstByQuery
-│       ├── developerTokenService.ts # 从 env 读 token（或自签）
-│       ├── env.ts                   # 类型化 env（Apple + Spotify）
+│       ├── appleMusicService.ts     # searchCatalog + findFirstByQuery（Origin/UA 锁住）
+│       ├── developerTokenService.ts # 返回 prebaked token，或在配齐 TEAM/KEY 时自签 ES256 JWT
+│       ├── env.ts                   # 类型化 env（仅 Apple —— 无 Spotify env 字段）
 │       ├── httpError.ts
 │       ├── nextHandler.ts           # withErrorHandler / pickQuery / pickHeader / pickInt
-│       ├── matchService.ts          # ISRC + fuzzy 匹配
-│       ├── spotifyService.ts        # Spotify Web API + OAuth + state 签名
-│       ├── spotifySession.ts        # cookie 助手
+│       ├── matchService.ts          # fuzzy 匹配（token Jaccard + duration 惩罚）
+│       ├── spotifyService.ts        # extractPlaylistId + fetchPublicPlaylistViaEmbed
 │       └── types/{appleMusic,spotify}.ts
 ├── next.config.js
 ├── tsconfig.json    # @/* → ./src/*
@@ -156,7 +153,7 @@ npm run clean          # 清 .next + coverage
 
 - **Biome** —— lint + format + import 排序。配置：[`biome.json`](./biome.json)。
 - **TypeScript strict** 覆盖整个 `src/`。路径别名 `@/*` → `./src/*`。
-- **Vitest 2** 覆盖 `src/lib/**`（Phase 17 时是 37 个测试）。
+- **Vitest 2** 覆盖 `src/lib/**` 和 `src/app/api/**` route handlers —— Phase 19 起 **59 个测试，7 个文件**。`vitest.config.ts` 镜像 tsconfig 的 `@/*` → `./src/*` 别名，让 route 测试能用同一种 import。
 - **Pre-commit 门禁：** `.husky/pre-commit` 每次 commit 跑 `check` + `typecheck`。测试在 `validate`（CI）里跑。
 - **不要随便 `git commit --no-verify`**，除非真的卡住。
 
@@ -167,6 +164,7 @@ npm run clean          # 清 .next + coverage
 - [x] Phase 16 — 重构到 Next.js 14 App Router
 - [x] Phase 17 — 转型 TuneFerry：Spotify Web API + OAuth + ISRC matching wizard（之后又重做 —— 见 Phase 18）
 - [x] Phase 18 — **彻底放弃 Spotify Web API**（2024 年起被 Premium 锁定）。改成爬公开 playlist 的 embed 页面。删 OAuth 整套、删 ISRC 分级、简化 `/import` 和 `/settings`。净 −1500 / +400 行，零订阅
+- [x] Phase 19 — 测试覆盖回填：`/api/spotify/playlist` 和 `/api/match` 的 route handler 集成测试 + `pickQuery`/`pickHeader`/`pickInt` / `findFirstByQuery` / `getDeveloperToken` 单元测试。Vitest 加 `@/*` alias 镜像 tsconfig。**34 → 59 测试**
 - [ ] 接下来 — 多 storefront 自动 retry（在 us 没匹配的曲自动 fallback hk/tw/jp）
 - [ ] 接下来 — `matchMany` 加并发（现在串行）
 - [ ] 接下来 — iOS Shortcut 导出（一键 add）

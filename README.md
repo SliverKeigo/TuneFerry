@@ -30,7 +30,7 @@ Public Spotify playlist URL
 - **Styling:** OKLCH CSS-variable token system + inline styles + a small `primitives.tsx` component library. No UI framework, no CSS Modules.
 - **Spotify:** Embed-page scraping (`https://open.spotify.com/embed/playlist/<id>`). Pulls the SSR'd `__NEXT_DATA__` JSON, walks to the track list. **No OAuth, no API keys, no env vars.**
 - **Apple Music:** Catalog search via `amp-api.music.apple.com` with a WebPlay-scraped Developer Token. Fuzzy matching written from scratch (token Jaccard + duration penalty). No `fuse.js` / `string-similarity` — ~30 lines.
-- **Quality:** Biome (lint + format + import sort), TypeScript strict, Vitest (34 tests), husky pre-commit hook.
+- **Quality:** Biome (lint + format + import sort), TypeScript strict, Vitest (59 tests across 7 files — covers `src/lib/**` + `src/app/api/**` route handlers), husky pre-commit hook.
 
 ## Project Layout
 
@@ -51,25 +51,20 @@ AM-API/
 │   │       │   ├── developer-token/route.ts
 │   │       │   └── catalog/search/route.ts
 │   │       ├── spotify/
-│   │       │   ├── auth/login/route.ts
-│   │       │   ├── auth/callback/route.ts
-│   │       │   ├── auth/logout/route.ts
-│   │       │   ├── playlist/route.ts        # public
-│   │       │   └── me/{playlists,playlist}/route.ts  # private
-│   │       └── match/route.ts
+│   │       │   └── playlist/route.ts        # GET — public playlist via embed scrape
+│   │       └── match/route.ts                # POST — Apple catalog fuzzy match
 │   ├── components/                  # primitives, icons, AppShell, Sidebar, TopNav, MobileNav, TweaksPanel, Providers
 │   ├── hooks/                       # useLocalStorage, useStorefront, useTweaks
 │   ├── api/appleMusicApi.ts         # client-side fetch wrapper for /api/apple-music/*
 │   ├── types/appleMusic.ts          # frontend Apple types
 │   └── lib/
-│       ├── appleMusicService.ts     # searchCatalog + findByIsrc + findFirstByQuery
-│       ├── developerTokenService.ts # token from env (or self-sign)
-│       ├── env.ts                   # typed env (Apple + Spotify)
+│       ├── appleMusicService.ts     # searchCatalog + findFirstByQuery (Origin/UA-locked)
+│       ├── developerTokenService.ts # returns prebaked token, or signs JWT (ES256) if APPLE_TEAM_ID + KEY are set
+│       ├── env.ts                   # typed env (Apple only — no Spotify env vars)
 │       ├── httpError.ts
 │       ├── nextHandler.ts           # withErrorHandler / pickQuery / pickHeader / pickInt
-│       ├── matchService.ts          # ISRC + fuzzy matching
-│       ├── spotifyService.ts        # Spotify Web API + OAuth + state signing
-│       ├── spotifySession.ts        # cookie helpers
+│       ├── matchService.ts          # fuzzy match (token Jaccard + duration penalty)
+│       ├── spotifyService.ts        # extractPlaylistId + fetchPublicPlaylistViaEmbed
 │       └── types/{appleMusic,spotify}.ts
 ├── next.config.js
 ├── tsconfig.json    # @/* → ./src/*
@@ -136,7 +131,7 @@ npx vercel link    # once
 npx vercel --prod
 ```
 
-Set the same env vars in Vercel's dashboard (or `vercel env add`). Make sure to update `SPOTIFY_REDIRECT_URI` to your production URL and re-register it in your Spotify app.
+Set `APPLE_MUSIC_DEVELOPER_TOKEN` (and optionally `NEXT_PUBLIC_DEFAULT_STOREFRONT`) in Vercel's dashboard (or `vercel env add`). No Spotify env vars are needed.
 
 ## Scripts
 
@@ -158,7 +153,7 @@ npm run clean          # rm .next + coverage
 
 - **Biome** — lint + format + import sort. Config: [`biome.json`](./biome.json).
 - **TypeScript strict** across all of `src/`. Path alias `@/*` → `./src/*`.
-- **Vitest 2** covers `src/lib/**` (37 tests as of Phase 17).
+- **Vitest 2** covers `src/lib/**` and `src/app/api/**` route handlers — **59 tests across 7 files** as of Phase 19. Vitest mirrors tsconfig's `@/*` → `./src/*` alias in `vitest.config.ts` so route tests can `import` the same way Next.js does.
 - **Pre-commit gate**: `.husky/pre-commit` runs `npm run check` + `npm run typecheck` on every commit. Tests run in `validate` (CI).
 - **No backdoor**: don't `git commit --no-verify` unless really stuck.
 
@@ -169,6 +164,7 @@ npm run clean          # rm .next + coverage
 - [x] Phase 16 — Rebuilt on Next.js 14 App Router
 - [x] Phase 17 — Pivot to TuneFerry: Spotify Web API + OAuth + ISRC matching wizard (subsequently rebuilt — see Phase 18)
 - [x] Phase 18 — **Drop Spotify Web API entirely** (Premium-locked since 2024). Replaced with embed-page scraping for public playlists. Removed all OAuth, removed ISRC tier, simplified `/import` and `/settings`. Net −1500 / +400 lines, zero subscriptions
+- [x] Phase 19 — Test coverage backfill: route handler integration tests for `/api/spotify/playlist` and `/api/match`, plus unit tests for `pickQuery`/`pickHeader`/`pickInt`, `findFirstByQuery`, and `getDeveloperToken`. Added Vitest `@/*` alias mirroring tsconfig. **34 → 59 tests**
 - [ ] Next — Per-storefront retry for tracks that miss in `us` (auto-fallback to `hk`/`tw`/`jp`)
 - [ ] Next — Concurrency in `matchMany` for large playlists (currently serial)
 - [ ] Next — iOS Shortcut export (one-tap add via Shortcuts app)
