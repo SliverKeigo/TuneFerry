@@ -41,9 +41,7 @@ export default function MobileNav() {
         display: 'flex',
         justifyContent: 'space-around',
         alignItems: 'center',
-        background: 'oklch(0.155 0.008 260 / 0.85)',
-        backdropFilter: 'blur(18px)',
-        WebkitBackdropFilter: 'blur(18px)',
+        background: 'var(--bg-2)',
         borderTop: '1px solid var(--hairline)',
       }}
     >

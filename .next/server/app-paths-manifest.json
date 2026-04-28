@@ -1,5 +1,0 @@
-{
-  "/api/spotify/playlist/route": "app/api/spotify/playlist/route.js",
-  "/import/page": "app/import/page.js",
-  "/api/match/route": "app/api/match/route.js"
-}

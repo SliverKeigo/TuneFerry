@@ -38,9 +38,10 @@ export default function Sidebar() {
         flexDirection: 'column',
         gap: 4,
         borderRight: '1px solid var(--hairline)',
-        background: 'oklch(0.155 0.008 260 / 0.6)',
-        backdropFilter: 'blur(18px)',
-        WebkitBackdropFilter: 'blur(18px)',
+        // Use CSS var (defined in globals.css for both dark + light themes)
+        // instead of a hardcoded oklch — otherwise the sidebar stays dark when
+        // the user switches to light mode in Settings.
+        background: 'var(--bg-2)',
         position: 'relative',
         zIndex: 2,
       }}

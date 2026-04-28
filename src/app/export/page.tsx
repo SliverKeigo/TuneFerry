@@ -109,7 +109,7 @@ export default function ExportPage() {
 
   if (missing) {
     return (
-      <main style={{ padding: '40px 32px', maxWidth: 720, margin: '0 auto' }}>
+      <main style={{ padding: '40px 32px', maxWidth: 720, margin: 0 }}>
         <PageHeader
           title="Nothing to export"
           desc="We couldn't find matched results in your session. Start a new migration."
@@ -128,7 +128,7 @@ export default function ExportPage() {
   }
 
   return (
-    <main style={{ padding: '32px 32px 64px', maxWidth: 1080, margin: '0 auto' }}>
+    <main style={{ padding: '32px 32px 64px', maxWidth: 1080, margin: 0 }}>
       <PageHeader
         eyebrow="Step 3 of 3"
         title="Export to Apple Music"

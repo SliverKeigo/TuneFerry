@@ -172,13 +172,28 @@ function toAppleSongLite(
  * Strategy: fuzzy text search ranked by `score()` and the duration-aware
  * threshold ladder above. The embed-scraped Spotify payload has no ISRC, so
  * this is the only path — the old deterministic ISRC branch is gone.
+ *
+ * Upstream errors (429 rate-limit, 5xx, network) degrade to a `'none'` match
+ * with `reason: 'upstream-error'` so a single bad track doesn't fail the
+ * whole `matchMany` run for a 91-track playlist.
  */
 export async function matchOne(input: MatchInput): Promise<MatchResult> {
   const { spotify, storefront } = input;
 
   const primaryArtist = spotify.artists[0] ?? '';
   const term = `${spotify.name} ${primaryArtist}`.trim();
-  const songs = await findFirstByQuery({ query: term, storefront, limit: SEARCH_LIMIT });
+  let songs: AppleMusicResource<AppleMusicSongAttributes>[];
+  try {
+    songs = await findFirstByQuery({ query: term, storefront, limit: SEARCH_LIMIT });
+  } catch (err) {
+    return {
+      spotify,
+      apple: null,
+      confidence: 'none',
+      candidates: [],
+      reason: `upstream-error: ${err instanceof Error ? err.message : String(err)}`,
+    };
+  }
   if (songs.length === 0) {
     return {
       spotify,
@@ -232,17 +247,29 @@ export async function matchOne(input: MatchInput): Promise<MatchResult> {
   };
 }
 
+/** Tunable inter-request gap for `matchMany`. Apple started returning 429
+ * "Too Many Requests" around ~50 rapid catalog/search hits; 120ms keeps a
+ * 91-track playlist comfortably under their threshold while still finishing
+ * in ~11s. Bump if 429s come back. */
+const MATCH_THROTTLE_MS = 120;
+
+const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
+
 /**
- * Run `matchOne` over an array of tracks serially. Apple's catalog endpoint
- * is fast and we don't want to look like a scraper — concurrency can land
- * later if the wizard demands it.
+ * Run `matchOne` over an array of tracks serially with a small inter-request
+ * delay. Apple's catalog endpoint rate-limits us if we sustain more than
+ * ~50 hits with no gap. `matchOne` itself absorbs upstream errors so one
+ * 429 won't fail the whole batch.
  */
 export async function matchMany(
   tracks: SpotifyTrack[],
   storefront: string,
 ): Promise<MatchResult[]> {
   const results: MatchResult[] = [];
-  for (const t of tracks) {
+  for (let i = 0; i < tracks.length; i++) {
+    const t = tracks[i];
+    if (!t) continue;
+    if (i > 0) await sleep(MATCH_THROTTLE_MS);
     results.push(await matchOne({ spotify: t, storefront }));
   }
   return results;

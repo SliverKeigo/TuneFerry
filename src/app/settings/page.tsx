@@ -39,7 +39,7 @@ const PRESETS: { value: string; label: string }[] = [
 
 export default function SettingsPage() {
   return (
-    <main style={{ padding: '32px 32px 80px', maxWidth: 880, margin: '0 auto' }}>
+    <main style={{ padding: '32px 32px 80px', maxWidth: 880, margin: 0 }}>
       <PageHeader
         title="Settings"
         desc="Storefront, appearance, and the Apple Music developer token."

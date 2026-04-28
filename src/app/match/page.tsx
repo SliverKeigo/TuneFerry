@@ -143,7 +143,7 @@ export default function MatchPage() {
   // ── Render branches ─────────────────────────────────────────────────────────
   if (missing) {
     return (
-      <main style={{ padding: '40px 32px', maxWidth: 720, margin: '0 auto' }}>
+      <main style={{ padding: '40px 32px', maxWidth: 720, margin: 0 }}>
         <PageHeader
           title="Playlist not staged"
           desc="We couldn't find this playlist in your session. Head back to import to start over."
@@ -168,7 +168,7 @@ export default function MatchPage() {
   }
 
   return (
-    <main style={{ padding: '32px 32px 120px', maxWidth: 1080, margin: '0 auto' }}>
+    <main style={{ padding: '32px 32px 120px', maxWidth: 1080, margin: 0 }}>
       <PageHeader
         eyebrow={`Step 2 of 3 · storefront ${storefront}`}
         title={playlist.name}

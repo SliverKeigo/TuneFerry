@@ -36,9 +36,7 @@ export default function TopNav() {
         padding: '0 20px',
         gap: 20,
         borderBottom: '1px solid var(--hairline)',
-        background: 'oklch(0.155 0.008 260 / 0.65)',
-        backdropFilter: 'blur(18px)',
-        WebkitBackdropFilter: 'blur(18px)',
+        background: 'var(--bg-2)',
         position: 'relative',
         zIndex: 2,
       }}

@@ -69,7 +69,7 @@ export default function ImportPage() {
     : null;
 
   return (
-    <main style={{ padding: '32px 32px 80px', maxWidth: 720, margin: '0 auto' }}>
+    <main style={{ padding: '32px 32px 80px', maxWidth: 720, margin: 0 }}>
       <div style={{ marginBottom: 16 }}>
         <Pill tone="warn">
           <Icon.Alert size={12} /> Public playlists only. Set the playlist to public on Spotify

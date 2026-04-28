@@ -9,32 +9,20 @@ export default function HomePage() {
   const router = useRouter();
 
   return (
-    <main style={{ padding: '40px 32px 64px', maxWidth: 980, margin: '0 auto' }}>
+    <main style={{ padding: '40px 32px 64px', maxWidth: 980, margin: 0 }}>
       <PageHeader
         eyebrow="Spotify → Apple Music"
         title="Move playlists. Keep your taste."
-        desc="Paste a public Spotify playlist URL, or sign in to migrate your own private ones. We match every track against the Apple Music catalog and hand you a clean deep-link list (and a .m3u8) to bring it home."
+        desc="Paste a public Spotify playlist URL — we match every track against the Apple Music catalog and hand you a clean deep-link list (and a .m3u8) to bring it home."
         right={
-          <>
-            <Button
-              variant="primary"
-              size="lg"
-              icon={<Icon.Arrow size={16} />}
-              onClick={() => router.push('/import')}
-            >
-              Migrate a playlist
-            </Button>
-            <Button
-              variant="ghost"
-              size="lg"
-              icon={<Icon.Link size={16} />}
-              onClick={() => {
-                window.location.href = '/api/spotify/auth/login';
-              }}
-            >
-              Sign in with Spotify
-            </Button>
-          </>
+          <Button
+            variant="primary"
+            size="lg"
+            icon={<Icon.Arrow size={16} />}
+            onClick={() => router.push('/import')}
+          >
+            Migrate a playlist
+          </Button>
         }
       />
 
