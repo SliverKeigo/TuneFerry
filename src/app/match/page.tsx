@@ -17,11 +17,23 @@ import type { SpotifyPlaylist, SpotifyTrack } from '@/lib/types/spotify';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 interface ApiErrorBody {
   error?: { message?: string };
 }
+
+/**
+ * Error state stored *as a key plus optional payload*, never a translated
+ * string. Two reasons:
+ *   1. Letting the match-effect depend on `t` would re-run the effect (and
+ *      thus replay POST /api/match) every time the user switches language —
+ *      silently discarding their include / candidate edits.
+ *   2. Storing translated strings freezes the wording at the time the error
+ *      occurred. Storing a key lets the rendered text follow the current
+ *      locale via a tiny derived selector.
+ */
+type MatchError = { kind: 'http'; message: string } | { kind: 'unknown' };
 
 /**
  * Locally-augmented MatchResult: tracks the user's chosen Apple song (which
@@ -82,8 +94,15 @@ function MatchPageContent() {
   const [playlist, setPlaylist] = useState<SpotifyPlaylist | null>(null);
   const [missing, setMissing] = useState(false);
   const [matching, setMatching] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [matchError, setMatchError] = useState<MatchError | null>(null);
   const [rows, setRows] = useState<RowState[]>([]);
+
+  // `t` is captured by ref so the match effect below can reach the latest
+  // translator inside catch / toast without re-running on every locale change.
+  // Without this, switching language would retrigger POST /api/match and
+  // replace `rows` — silently dropping the user's manual edits.
+  const tRef = useRef(t);
+  tRef.current = t;
 
   // Read staged playlist from sessionStorage.
   useEffect(() => {
@@ -105,12 +124,17 @@ function MatchPageContent() {
   }, [spotifyId]);
 
   // Run /api/match once we have the playlist.
+  // Deps intentionally exclude `t` — `useTranslations` returns a fresh
+  // function every locale change, so depending on it would re-run the
+  // effect (and POST /api/match again) when the user switches language,
+  // wiping rows the user already edited. The catch path uses tRef.current
+  // to grab the *current* translator without joining the dependency set.
   useEffect(() => {
     if (!playlist) return;
     let cancelled = false;
     (async () => {
       setMatching(true);
-      setError(null);
+      setMatchError(null);
       try {
         const res = await fetch('/api/match', {
           method: 'POST',
@@ -132,9 +156,13 @@ function MatchPageContent() {
         );
       } catch (err) {
         if (!cancelled) {
-          const msg = err instanceof Error ? err.message : t('matchFailed');
-          setError(msg);
-          toast({ message: msg, tone: 'err' });
+          const next: MatchError =
+            err instanceof Error && err.message
+              ? { kind: 'http', message: err.message }
+              : { kind: 'unknown' };
+          setMatchError(next);
+          const toastMsg = next.kind === 'http' ? next.message : tRef.current('matchFailed');
+          toast({ message: toastMsg, tone: 'err' });
         }
       } finally {
         if (!cancelled) setMatching(false);
@@ -143,7 +171,7 @@ function MatchPageContent() {
     return () => {
       cancelled = true;
     };
-  }, [playlist, storefront, toast, t]);
+  }, [playlist, storefront, toast]);
 
   // Counts for header / sticky bar.
   const counts = useMemo(() => {
@@ -226,7 +254,7 @@ function MatchPageContent() {
         </div>
       )}
 
-      {error && !matching && (
+      {matchError && !matching && (
         <div
           className="panel"
           style={{
@@ -238,7 +266,10 @@ function MatchPageContent() {
             borderColor: 'oklch(0.72 0.19 25 / 0.4)',
           }}
         >
-          <Icon.Alert size={16} /> <span style={{ fontSize: 13 }}>{error}</span>
+          <Icon.Alert size={16} />{' '}
+          <span style={{ fontSize: 13 }}>
+            {matchError.kind === 'http' ? matchError.message : t('matchFailed')}
+          </span>
         </div>
       )}
 
