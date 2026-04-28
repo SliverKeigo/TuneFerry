@@ -12,7 +12,7 @@ import {
 } from '@/components/primitives';
 import type { AppleSongLite, MatchResult } from '@/lib/matchService';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 
 /** Persisted shape from the Match page. */
 interface FinalizedMatch extends MatchResult {
@@ -26,7 +26,24 @@ interface ExportRow {
   fallbackDurationMs: number;
 }
 
+// Suspense boundary — same reason as /match/page.tsx.
 export default function ExportPage() {
+  return (
+    <Suspense fallback={<ExportLoadingFallback />}>
+      <ExportPageContent />
+    </Suspense>
+  );
+}
+
+function ExportLoadingFallback() {
+  return (
+    <main style={{ padding: '40px 32px', maxWidth: 720, margin: 0 }}>
+      <div style={{ color: 'var(--text-3)', fontSize: 13 }}>Loading export…</div>
+    </main>
+  );
+}
+
+function ExportPageContent() {
   const router = useRouter();
   const params = useSearchParams();
   const toast = useToast();

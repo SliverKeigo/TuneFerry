@@ -4,6 +4,10 @@ import { withErrorHandler } from '@/lib/nextHandler';
 import type { SpotifyTrack } from '@/lib/types/spotify';
 import { NextResponse } from 'next/server';
 
+// All API handlers in this file talk to live external services
+// (env-bound tokens, query/body params) so they cannot be prerendered.
+export const dynamic = 'force-dynamic';
+
 const MAX_TRACKS_PER_REQUEST = 500;
 
 interface MatchRequestBody {

@@ -16,7 +16,7 @@ import type { AppleSongLite, MatchConfidence, MatchResult } from '@/lib/matchSer
 import type { SpotifyPlaylist, SpotifyTrack } from '@/lib/types/spotify';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 
 interface ApiErrorBody {
   error?: { message?: string };
@@ -40,7 +40,26 @@ const CONFIDENCE_TONE: Record<MatchConfidence, PillTone> = {
   none: 'err',
 };
 
+// `useSearchParams` requires a Suspense boundary in Next 14 App Router so
+// the page can statically prerender a fallback before client-side hydration.
+// `export default` is the wrapper; the real component lives below.
 export default function MatchPage() {
+  return (
+    <Suspense fallback={<MatchLoadingFallback />}>
+      <MatchPageContent />
+    </Suspense>
+  );
+}
+
+function MatchLoadingFallback() {
+  return (
+    <main style={{ padding: '40px 32px', maxWidth: 720, margin: 0 }}>
+      <div style={{ color: 'var(--text-3)', fontSize: 13 }}>Loading match…</div>
+    </main>
+  );
+}
+
+function MatchPageContent() {
   const router = useRouter();
   const params = useSearchParams();
   const toast = useToast();
