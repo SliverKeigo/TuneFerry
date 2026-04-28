@@ -64,7 +64,7 @@ export default function MatchPage() {
 function MatchLoadingFallback() {
   const t = useTranslations('match');
   return (
-    <main style={{ padding: '40px 32px', maxWidth: 920, margin: '0 auto' }}>
+    <main className="page-main page-main--form">
       <div style={{ color: 'var(--text-3)', fontSize: 13 }}>{t('loading')}</div>
     </main>
   );
@@ -174,7 +174,7 @@ function MatchPageContent() {
   // ── Render branches ─────────────────────────────────────────────────────────
   if (missing) {
     return (
-      <main style={{ padding: '40px 32px', maxWidth: 920, margin: '0 auto' }}>
+      <main className="page-main page-main--form">
         <PageHeader title={t('missingTitle')} desc={t('missingDesc')} />
         <Button variant="primary" onClick={() => router.push('/import')}>
           {t('goImport')}
@@ -196,7 +196,7 @@ function MatchPageContent() {
   }
 
   return (
-    <main style={{ padding: '32px 48px 120px', maxWidth: 1280, margin: '0 auto' }}>
+    <main className="page-main page-main--match">
       <PageHeader
         eyebrow={t('eyebrow', { storefront })}
         title={playlist.name}
@@ -268,24 +268,7 @@ function MatchPageContent() {
       )}
 
       {/* Sticky continue bar */}
-      <div
-        style={{
-          position: 'fixed',
-          left: 0,
-          right: 0,
-          bottom: 0,
-          padding: '12px 24px',
-          background: 'oklch(0.155 0.008 260 / 0.85)',
-          backdropFilter: 'blur(18px)',
-          WebkitBackdropFilter: 'blur(18px)',
-          borderTop: '1px solid var(--hairline)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: 16,
-          zIndex: 10,
-        }}
-      >
+      <div className="match-sticky-bar">
         <div style={{ fontSize: 13, color: 'var(--text-2)' }}>
           {t('stickyIncluded', {
             included: counts.included,
@@ -334,13 +317,8 @@ function MatchRow({
 
   return (
     <li
-      className="panel"
+      className="panel match-row"
       style={{
-        padding: '12px 14px',
-        display: 'grid',
-        gridTemplateColumns: 'auto 1fr auto 1fr auto',
-        alignItems: 'center',
-        gap: 14,
         opacity: included ? 1 : 0.55,
         transition: 'opacity var(--dur) var(--ease)',
       }}
@@ -455,23 +433,7 @@ function MatchRow({
             >
               {t('change')} <Icon.ChevronDown size={11} />
             </summary>
-            <div
-              style={{
-                position: 'absolute',
-                top: 'calc(100% + 6px)',
-                right: 0,
-                width: 320,
-                zIndex: 5,
-                padding: 6,
-                background: 'var(--panel-solid)',
-                border: '1px solid var(--hairline)',
-                borderRadius: 10,
-                boxShadow: 'var(--shadow-2)',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 2,
-              }}
-            >
+            <div className="match-candidate-popover">
               {candidates.length === 0 && (
                 <div style={{ padding: 10, fontSize: 12, color: 'var(--text-4)' }}>
                   {t('noAlternatives')}

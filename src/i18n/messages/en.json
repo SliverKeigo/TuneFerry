@@ -35,7 +35,7 @@
     "errorBadGateway": "Spotify changed their embed page — please try again, or report this.",
     "fetchFailed": "Failed to fetch playlist.",
     "loadedToast": "Loaded \"{name}\" — {count} tracks.",
-    "tip1": "Paste any public Spotify playlist URL — works for both <code>https://open.spotify.com/playlist/&lt;id&gt;?si=…</code> and bare IDs.",
+    "tip1": "Paste any public Spotify playlist URL — works for both <code>https://open.spotify.com/playlist/[id]?si=…</code> and bare IDs.",
     "tip2": "Up to <strong>100 tracks</strong> per playlist (Spotify embed limit). Spotify's algorithmic playlists like \"Today's Top Hits\" cap at 50.",
     "tip3": "No sign-in. We never see your Spotify account.",
     "inputAria": "Spotify playlist URL or ID"

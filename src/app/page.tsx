@@ -11,7 +11,7 @@ export default function HomePage() {
   const t = useTranslations('home');
 
   return (
-    <main style={{ padding: '40px 48px 64px', maxWidth: 1100, margin: '0 auto' }}>
+    <main className="page-main page-main--home">
       <PageHeader
         eyebrow={t('eyebrow')}
         title={t('title')}
@@ -29,14 +29,7 @@ export default function HomePage() {
       />
 
       {/* 3 step cards */}
-      <section
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-          gap: 16,
-          marginTop: 8,
-        }}
-      >
+      <section className="cards-3">
         <StepCard
           step={1}
           icon={<Icon.Filter size={18} />}

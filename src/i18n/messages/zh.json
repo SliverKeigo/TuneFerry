@@ -35,7 +35,7 @@
     "errorBadGateway": "Spotify 改了 embed 页面 —— 请重试，或反馈给我们。",
     "fetchFailed": "拉取歌单失败。",
     "loadedToast": "已加载「{name}」—— 共 {count} 首。",
-    "tip1": "粘贴任意公开的 Spotify 歌单链接 —— 同时支持 <code>https://open.spotify.com/playlist/&lt;id&gt;?si=…</code> 和裸 ID。",
+    "tip1": "粘贴任意公开的 Spotify 歌单链接 —— 同时支持 <code>https://open.spotify.com/playlist/[id]?si=…</code> 和裸 ID。",
     "tip2": "每个歌单最多 <strong>100 首</strong>（Spotify embed 限制）。Spotify 的算法歌单（如 Today's Top Hits）封顶 50。",
     "tip3": "无需登录。我们不会接触到你的 Spotify 账号。",
     "inputAria": "Spotify 歌单链接或 ID"

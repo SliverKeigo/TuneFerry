@@ -100,14 +100,7 @@ export default function TweaksPanel() {
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div
-      style={{
-        display: 'grid',
-        gridTemplateColumns: '120px 1fr',
-        alignItems: 'center',
-        gap: 16,
-      }}
-    >
+    <div className="settings-row settings-row--narrow">
       <span style={{ fontSize: 12.5, color: 'var(--text-3)', fontWeight: 500 }}>{label}</span>
       {children}
     </div>

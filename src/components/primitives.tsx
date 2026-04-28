@@ -573,15 +573,7 @@ export function SectionHeader({
   right?: ReactNode;
 }) {
   return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'flex-end',
-        justifyContent: 'space-between',
-        gap: 16,
-        marginBottom: 14,
-      }}
-    >
+    <div className="section-header">
       <div>
         <h2 style={{ margin: 0, fontSize: 15, fontWeight: 600, letterSpacing: -0.1 }}>{title}</h2>
         {desc && (
@@ -606,11 +598,8 @@ export function PageHeader({
 }) {
   return (
     <header
+      className="page-header"
       style={{
-        display: 'flex',
-        alignItems: 'flex-end',
-        justifyContent: 'space-between',
-        gap: 16,
         marginBottom: 28,
         paddingBottom: 20,
         borderBottom: '1px solid var(--hairline)',

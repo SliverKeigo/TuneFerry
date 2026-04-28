@@ -71,7 +71,7 @@ export default function ImportPage() {
     : null;
 
   return (
-    <main style={{ padding: '32px 32px 80px', maxWidth: 920, margin: '0 auto' }}>
+    <main className="page-main page-main--import">
       <div style={{ marginBottom: 16 }}>
         <Pill tone="warn">
           <Icon.Alert size={12} /> {t('publicOnly')}
@@ -146,7 +146,12 @@ export default function ImportPage() {
             {t.rich('tip1', {
               code: (chunks) => (
                 <code
-                  style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: 'var(--text-3)' }}
+                  style={{
+                    fontSize: 12,
+                    fontFamily: 'var(--font-mono)',
+                    color: 'var(--text-3)',
+                    wordBreak: 'break-all',
+                  }}
                 >
                   {chunks}
                 </code>

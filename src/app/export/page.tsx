@@ -39,7 +39,7 @@ export default function ExportPage() {
 function ExportLoadingFallback() {
   const t = useTranslations('export');
   return (
-    <main style={{ padding: '40px 32px', maxWidth: 920, margin: '0 auto' }}>
+    <main className="page-main page-main--form">
       <div style={{ color: 'var(--text-3)', fontSize: 13 }}>{t('loading')}</div>
     </main>
   );
@@ -129,7 +129,7 @@ function ExportPageContent() {
 
   if (missing) {
     return (
-      <main style={{ padding: '40px 32px', maxWidth: 920, margin: '0 auto' }}>
+      <main className="page-main page-main--form">
         <PageHeader title={t('missingTitle')} desc={t('missingDesc')} />
         <Button variant="primary" onClick={() => router.push('/import')}>
           {t('startMigration')}
@@ -145,7 +145,7 @@ function ExportPageContent() {
   }
 
   return (
-    <main style={{ padding: '32px 48px 64px', maxWidth: 1280, margin: '0 auto' }}>
+    <main className="page-main page-main--export">
       <PageHeader
         eyebrow={t('eyebrow')}
         title={t('title')}
@@ -172,14 +172,7 @@ function ExportPageContent() {
       )}
 
       {rows.length > 0 && (
-        <section
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'minmax(0, 1.5fr) minmax(0, 1fr)',
-            gap: 20,
-            alignItems: 'flex-start',
-          }}
-        >
+        <section className="export-grid">
           {/* Deep link list */}
           <div className="panel" style={{ padding: 18 }}>
             <SectionHeader

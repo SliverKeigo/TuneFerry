@@ -43,7 +43,7 @@ const PRESETS: { value: string; key: PresetKey }[] = [
 export default function SettingsPage() {
   const t = useTranslations('settings');
   return (
-    <main style={{ padding: '32px 32px 80px', maxWidth: 1100, margin: '0 auto' }}>
+    <main className="page-main page-main--settings">
       <PageHeader title={t('title')} desc={t('desc')} />
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -298,16 +298,11 @@ function AppleTokenSection() {
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div
-      style={{
-        display: 'grid',
-        gridTemplateColumns: '140px 1fr',
-        alignItems: 'center',
-        gap: 16,
-      }}
-    >
+    <div className="settings-row">
       <span style={{ fontSize: 12.5, color: 'var(--text-3)', fontWeight: 500 }}>{label}</span>
-      <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>{children}</div>
+      <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+        {children}
+      </div>
     </div>
   );
 }
