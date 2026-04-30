@@ -13,7 +13,8 @@ import {
 } from '@/components/primitives';
 import { useStorefront } from '@/hooks/useStorefront';
 import type { AppleSongLite, MatchConfidence, MatchResult } from '@/lib/matchService';
-import type { SpotifyPlaylist, SpotifyTrack } from '@/lib/types/spotify';
+import type { SourceTrack } from '@/lib/types/source';
+import type { SpotifyPlaylist } from '@/lib/types/spotify';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -294,7 +295,7 @@ function MatchPageContent() {
         >
           {rows.map((row, i) => (
             <MatchRow
-              key={row.result.spotify.id}
+              key={row.result.source.id}
               row={row}
               t={t}
               onToggleInclude={() =>
@@ -350,7 +351,7 @@ function MatchRow({
   onPick: (cand: AppleSongLite | null) => void;
 }) {
   const { result, chosen, included } = row;
-  const sp: SpotifyTrack = result.spotify;
+  const sp: SourceTrack = result.source;
   const tone = CONFIDENCE_TONE[result.confidence];
   const candidates = result.candidates;
 

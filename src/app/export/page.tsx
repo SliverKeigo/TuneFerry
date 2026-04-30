@@ -96,7 +96,7 @@ function ExportPageContent() {
           index: i + 1,
           // The filter above guarantees apple is non-null.
           apple: m.apple as AppleSongLite,
-          fallbackDurationMs: m.spotify.durationMs,
+          fallbackDurationMs: m.source.durationMs,
         }));
       setRows(filtered);
     } catch {

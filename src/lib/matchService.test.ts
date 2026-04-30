@@ -2,20 +2,19 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { env } from './env';
 import { jaccard, matchOne, normalize, score, tokenize } from './matchService';
 import type { AppleSongLite } from './matchService';
-import type { SpotifyTrack } from './types/spotify';
+import type { SourceTrack } from './types/source';
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-function spotifyFixture(overrides: Partial<SpotifyTrack> = {}): SpotifyTrack {
+function sourceFixture(overrides: Partial<SourceTrack> = {}): SourceTrack {
   return {
+    sourceType: 'spotify',
     id: '6rqhFgbbKwnb9MLmUQDhG6',
     name: 'Hey Jude',
     artists: ['The Beatles'],
     durationMs: 425_000,
-    audioPreviewUrl: undefined,
-    spotifyUrl: 'https://open.spotify.com/track/6rqhFgbbKwnb9MLmUQDhG6',
     ...overrides,
   };
 }
@@ -104,18 +103,18 @@ describe('tokenize / jaccard', () => {
 
 describe('score', () => {
   it('returns ~1 for an exact name+artist match within duration tolerance', () => {
-    const s = score(spotifyFixture(), appleSongLite());
+    const s = score(sourceFixture(), appleSongLite());
     expect(s).toBeGreaterThanOrEqual(0.95);
   });
 
   it('penalises a >8s duration mismatch by 0.7', () => {
-    const baseScore = score(spotifyFixture(), appleSongLite());
-    const penalised = score(spotifyFixture(), appleSongLite({ durationMs: 425_000 + 30_000 }));
+    const baseScore = score(sourceFixture(), appleSongLite());
+    const penalised = score(sourceFixture(), appleSongLite({ durationMs: 425_000 + 30_000 }));
     expect(penalised).toBeCloseTo(baseScore * 0.7, 2);
   });
 
   it('drops sharply when artist name is wrong', () => {
-    const s = score(spotifyFixture(), appleSongLite({ artistName: 'Some Cover Band' }));
+    const s = score(sourceFixture(), appleSongLite({ artistName: 'Some Cover Band' }));
     expect(s).toBeLessThan(0.7);
   });
 });
@@ -168,7 +167,7 @@ describe('matchOne', () => {
       }),
     );
 
-    const result = await matchOne({ spotify: spotifyFixture(), storefront: 'us' });
+    const result = await matchOne({ source: sourceFixture(), storefront: 'us' });
     expect(result.confidence).toBe('high');
     expect(result.reason).toBe('fuzzy');
     expect(result.apple?.id).toBe('42');
@@ -196,8 +195,8 @@ describe('matchOne', () => {
       }),
     );
 
-    const result = await matchOne({ spotify: spotifyFixture(), storefront: 'us' });
-    // Tokens: spotify=[hey,jude,the,beatles] vs apple=[hey,jude,the,beatles,cover]
+    const result = await matchOne({ source: sourceFixture(), storefront: 'us' });
+    // Tokens: source=[hey,jude,the,beatles] vs apple=[hey,jude,the,beatles,cover]
     // intersection=4, union=5 → 0.8 → 'low' (>= 0.6, < 0.85).
     expect(result.confidence).toBe('low');
     expect(result.apple?.id).toBe('99');
@@ -206,7 +205,7 @@ describe('matchOne', () => {
   it('no results from Apple → confidence "none"', async () => {
     fetchMock.mockResolvedValueOnce(jsonResponse({ results: { songs: { data: [] } } }));
 
-    const result = await matchOne({ spotify: spotifyFixture(), storefront: 'us' });
+    const result = await matchOne({ source: sourceFixture(), storefront: 'us' });
     expect(result.confidence).toBe('none');
     expect(result.apple).toBeNull();
     expect(result.reason).toBe('no-results');

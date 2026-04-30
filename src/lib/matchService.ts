@@ -1,6 +1,6 @@
 import { findFirstByQuery } from './appleMusicService';
 import type { AppleMusicResource, AppleMusicSongAttributes } from './types/appleMusic';
-import type { SpotifyTrack } from './types/spotify';
+import type { SourceTrack } from './types/source';
 
 // ---------------------------------------------------------------------------
 // Public types
@@ -12,7 +12,7 @@ import type { SpotifyTrack } from './types/spotify';
 export type MatchConfidence = 'high' | 'low' | 'none';
 
 export interface MatchInput {
-  spotify: SpotifyTrack;
+  source: SourceTrack;
   storefront: string;
   /**
    * Aborts the underlying Apple Music search. Lets `matchMany` short-circuit
@@ -36,7 +36,7 @@ export interface AppleSongLite {
 }
 
 export interface MatchResult {
-  spotify: SpotifyTrack;
+  source: SourceTrack;
   apple: AppleSongLite | null;
   confidence: MatchConfidence;
   /** Top alternatives for manual override in the UI. Always <= 5. */
@@ -116,15 +116,15 @@ export function jaccard(a: string[], b: string[]): number {
   return union === 0 ? 0 : inter / union;
 }
 
-/** Score a candidate against a Spotify track. Returns a number in [0, 1]. */
-export function score(spotify: SpotifyTrack, candidate: AppleSongLite): number {
-  const left = tokenize(`${spotify.name} ${spotify.artists.join(' ')}`);
+/** Score a candidate against a source track. Returns a number in [0, 1]. */
+export function score(source: SourceTrack, candidate: AppleSongLite): number {
+  const left = tokenize(`${source.name} ${source.artists.join(' ')}`);
   const right = tokenize(`${candidate.name} ${candidate.artistName}`);
   let s = jaccard(left, right);
 
   if (
     candidate.durationMs &&
-    Math.abs(candidate.durationMs - spotify.durationMs) > DURATION_TOLERANCE_MS
+    Math.abs(candidate.durationMs - source.durationMs) > DURATION_TOLERANCE_MS
   ) {
     s *= DURATION_PENALTY;
   }
@@ -173,22 +173,22 @@ function toAppleSongLite(
 // ---------------------------------------------------------------------------
 
 /**
- * Match a single Spotify track against the Apple Music catalog.
+ * Match a single source track against the Apple Music catalog.
  *
  * Strategy: fuzzy text search ranked by `score()` and the duration-aware
- * threshold ladder above. The embed-scraped Spotify payload has no ISRC, so
- * this is the only path — the old deterministic ISRC branch is gone.
+ * threshold ladder above. Sources like the Spotify embed scrape have no ISRC,
+ * so this is the only path — the old deterministic ISRC branch is gone.
  *
  * Upstream errors (429 rate-limit, 5xx, network) degrade to a `'none'` match
  * with `reason: 'upstream-error'` so a single bad track doesn't fail the
  * whole `matchMany` run for a 91-track playlist.
  */
 export async function matchOne(input: MatchInput): Promise<MatchResult> {
-  const { spotify, storefront, signal } = input;
+  const { source, storefront, signal } = input;
   signal?.throwIfAborted();
 
-  const primaryArtist = spotify.artists[0] ?? '';
-  const term = `${spotify.name} ${primaryArtist}`.trim();
+  const primaryArtist = source.artists[0] ?? '';
+  const term = `${source.name} ${primaryArtist}`.trim();
   let songs: AppleMusicResource<AppleMusicSongAttributes>[];
   try {
     songs = await findFirstByQuery({ query: term, storefront, limit: SEARCH_LIMIT, signal });
@@ -197,7 +197,7 @@ export async function matchOne(input: MatchInput): Promise<MatchResult> {
     // as just another upstream error.
     if (err instanceof Error && err.name === 'AbortError') throw err;
     return {
-      spotify,
+      source,
       apple: null,
       confidence: 'none',
       candidates: [],
@@ -206,7 +206,7 @@ export async function matchOne(input: MatchInput): Promise<MatchResult> {
   }
   if (songs.length === 0) {
     return {
-      spotify,
+      source,
       apple: null,
       confidence: 'none',
       candidates: [],
@@ -217,12 +217,12 @@ export async function matchOne(input: MatchInput): Promise<MatchResult> {
   const scored = songs
     .map((r) => toAppleSongLite(r, storefront))
     .filter((s): s is AppleSongLite => s !== null)
-    .map((lite) => ({ lite, s: score(spotify, lite) }))
+    .map((lite) => ({ lite, s: score(source, lite) }))
     .sort((a, b) => b.s - a.s);
 
   if (scored.length === 0) {
     return {
-      spotify,
+      source,
       apple: null,
       confidence: 'none',
       candidates: [],
@@ -233,14 +233,14 @@ export async function matchOne(input: MatchInput): Promise<MatchResult> {
   const top = scored[0];
   if (!top) {
     // Unreachable given the length check above; keeps strict TS happy.
-    return { spotify, apple: null, confidence: 'none', candidates: [], reason: 'no-results' };
+    return { source, apple: null, confidence: 'none', candidates: [], reason: 'no-results' };
   }
   const confidence = confidenceFromScore(top.s);
   const allCandidates = scored.map((x) => x.lite);
 
   if (confidence === 'none') {
     return {
-      spotify,
+      source,
       apple: null,
       confidence: 'none',
       candidates: allCandidates.slice(0, MAX_CANDIDATES),
@@ -249,7 +249,7 @@ export async function matchOne(input: MatchInput): Promise<MatchResult> {
   }
 
   return {
-    spotify,
+    source,
     apple: top.lite,
     confidence,
     candidates: allCandidates.slice(1, MAX_CANDIDATES + 1),
@@ -294,7 +294,7 @@ const sleep = (ms: number, signal?: AbortSignal): Promise<void> =>
  * the user switched storefront and the in-flight request was cancelled).
  */
 export async function matchMany(
-  tracks: SpotifyTrack[],
+  tracks: SourceTrack[],
   storefront: string,
   signal?: AbortSignal,
 ): Promise<MatchResult[]> {
@@ -304,7 +304,7 @@ export async function matchMany(
     if (!t) continue;
     if (i > 0) await sleep(MATCH_THROTTLE_MS, signal);
     signal?.throwIfAborted();
-    results.push(await matchOne({ spotify: t, storefront, signal }));
+    results.push(await matchOne({ source: t, storefront, signal }));
   }
   return results;
 }

@@ -13,11 +13,11 @@ import { POST } from './route';
 const matchManyMock = vi.mocked(matchMany);
 
 const validTrack = {
+  sourceType: 'spotify' as const,
   id: 'spotify-1',
   name: 'Hello',
   artists: ['Adele'],
   durationMs: 295000,
-  spotifyUrl: 'https://open.spotify.com/track/spotify-1',
 };
 
 function postWith(body: unknown): NextRequest {
@@ -83,7 +83,7 @@ describe('POST /api/match', () => {
   it('happy path: forwards tracks + storefront to matchMany and wraps the result', async () => {
     matchManyMock.mockResolvedValue([
       {
-        spotify: validTrack,
+        source: validTrack,
         apple: {
           id: 'apple-1',
           name: 'Hello',
