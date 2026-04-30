@@ -5,15 +5,15 @@ import {
   Artwork,
   Button,
   PageHeader,
-  Pill,
   SectionHeader,
   artworkHueFromId,
   useToast,
 } from '@/components/primitives';
+import type { Locale } from '@/hooks/useTweaks';
 import type { AppleSongLite, MatchResult } from '@/lib/matchService';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import { Suspense, useCallback, useEffect, useState } from 'react';
 
 /** Persisted shape from the Match page. */
 interface FinalizedMatch extends MatchResult {
@@ -26,6 +26,28 @@ interface ExportRow {
   /** Spotify duration as a fallback if Apple lacks one. */
   fallbackDurationMs: number;
 }
+
+// We previously swapped row links to a `music://` scheme to bypass the IP-
+// based region redirect on Apple's web player. That broke clicks on every
+// platform without a registered `music://` handler (non-Apple OSes, or Macs
+// without Music.app installed). Reverted to the canonical https URL — Apple's
+// Universal Links still take iOS/macOS users straight into the Music app when
+// it's installed; everyone else falls through to the web player.
+
+// "TXT to Apple Music Playlist" — community Shortcut that takes a newline list
+// of "<title> <artist>" entries and adds each to a Music app playlist via the
+// Search iTunes Store action (the missing-piece action: it returns iTunes
+// Products that the Add-to-Playlist action accepts, unlike Find Music which is
+// library-only and unlike Search Apple Music which doesn't exist as a Shortcut
+// action). Runs entirely on the user's device. Localized fork per locale so
+// the in-Shortcut prompts match the UI language. Verified URLs 2026-04-30 —
+// iCloud hashes change if the community author re-publishes; refresh here.
+// Typed as `Record<Locale, string>` so adding a new locale to `useTweaks.tsx`
+// without adding a URL here becomes a typecheck error, not a silent EN fallback.
+const SHORTCUT_ICLOUD_URLS: Record<Locale, string> = {
+  en: 'https://www.icloud.com/shortcuts/b7468453e0ed497dbeb29c7e8dcc090f',
+  zh: 'https://www.icloud.com/shortcuts/e12f0787e59e40c6b26665200316b44b',
+};
 
 // Suspense boundary — same reason as /match/page.tsx.
 export default function ExportPage() {
@@ -50,6 +72,7 @@ function ExportPageContent() {
   const params = useSearchParams();
   const toast = useToast();
   const t = useTranslations('export');
+  const locale = useLocale();
 
   const spotifyId = params.get('spotify_id');
   const [missing, setMissing] = useState(false);
@@ -81,22 +104,10 @@ function ExportPageContent() {
     }
   }, [spotifyId]);
 
-  const m3u8Body = useMemo(() => {
-    if (!rows) return '';
-    const lines: string[] = ['#EXTM3U'];
-    for (const r of rows) {
-      const seconds = Math.round((r.apple.durationMs ?? r.fallbackDurationMs) / 1000);
-      // EXTINF strips newlines/commas defensively to keep the format valid.
-      const safeArtist = r.apple.artistName.replace(/[\r\n]+/g, ' ').replace(/,/g, '');
-      const safeTitle = r.apple.name.replace(/[\r\n]+/g, ' ').replace(/,/g, '');
-      lines.push(`#EXTINF:${seconds},${safeArtist} - ${safeTitle}`);
-      lines.push(r.apple.catalogUrl);
-    }
-    return `${lines.join('\n')}\n`;
-  }, [rows]);
-
   const onCopyAll = useCallback(async () => {
     if (!rows) return;
+    // Copy the canonical https:// form — pastes cleanly anywhere. The
+    // `music://` swap only matters for in-app click-through.
     const text = rows.map((r) => r.apple.catalogUrl).join('\n');
     try {
       await navigator.clipboard.writeText(text);
@@ -106,18 +117,28 @@ function ExportPageContent() {
     }
   }, [rows, toast, t]);
 
-  const onDownloadM3U = useCallback(() => {
-    if (!rows || rows.length === 0) return;
-    const blob = new Blob([m3u8Body], { type: 'audio/x-mpegurl' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `tuneferry-${spotifyId ?? 'playlist'}.m3u8`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-  }, [m3u8Body, rows, spotifyId]);
+  const onCopyShortcutList = useCallback(async () => {
+    if (!rows) return;
+    // Format expected by the "TXT to Apple Music Playlist" Shortcut: one
+    // "<title> <artist>" per line. Use Apple's matched name/artist (canonical
+    // for the iTunes Store search the Shortcut runs internally) — Spotify's
+    // original strings are slightly different and lower the hit rate.
+    const text = rows.map((r) => `${r.apple.name} ${r.apple.artistName}`).join('\n');
+    try {
+      await navigator.clipboard.writeText(text);
+      toast({ message: t('shortcutCopiedToast', { n: rows.length }), tone: 'ok' });
+    } catch {
+      toast({ message: t('clipboardError'), tone: 'err' });
+    }
+  }, [rows, toast, t]);
+
+  const onInstallShortcut = useCallback(() => {
+    // `useLocale()` returns `string`; we trust `useTweaks.sanitizeTweaks` to
+    // have already narrowed `tweaks.locale` (which feeds I18nProvider) to a
+    // known `Locale`. The `??` guard catches the impossible case anyway.
+    const url = SHORTCUT_ICLOUD_URLS[locale as Locale] ?? SHORTCUT_ICLOUD_URLS.en;
+    window.open(url, '_blank', 'noopener,noreferrer');
+  }, [locale]);
 
   const onStartOver = useCallback(() => {
     if (spotifyId) {
@@ -173,7 +194,6 @@ function ExportPageContent() {
 
       {rows.length > 0 && (
         <section className="export-grid">
-          {/* Deep link list */}
           <div className="panel" style={{ padding: 18 }}>
             <SectionHeader
               title={
@@ -193,6 +213,16 @@ function ExportPageContent() {
                 </Button>
               }
             />
+            <div
+              style={{
+                fontSize: 11.5,
+                color: 'var(--text-4)',
+                marginBottom: 10,
+                lineHeight: 1.5,
+              }}
+            >
+              {t('deepLinkPlatformHint')}
+            </div>
             <ol
               style={{
                 listStyle: 'none',
@@ -205,138 +235,137 @@ function ExportPageContent() {
                 overflowY: 'auto',
               }}
             >
-              {rows.map((r) => (
-                <li
-                  key={r.apple.id}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 12,
-                    padding: '8px 8px',
-                    borderRadius: 8,
-                    borderBottom: '1px solid var(--hairline)',
-                  }}
-                >
-                  <span
+              {rows.map((r) => {
+                const href = r.apple.catalogUrl;
+                return (
+                  <li
+                    key={r.apple.id}
                     style={{
-                      fontFamily: 'var(--font-mono)',
-                      fontSize: 11,
-                      color: 'var(--text-4)',
-                      width: 28,
-                      textAlign: 'right',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 12,
+                      padding: '8px 8px',
+                      borderRadius: 8,
+                      borderBottom: '1px solid var(--hairline)',
                     }}
                   >
-                    {r.index}
-                  </span>
-                  <Artwork
-                    size={36}
-                    radius={5}
-                    kind="song"
-                    hue={artworkHueFromId(r.apple.id)}
-                    imgSrc={r.apple.artworkUrl}
-                  />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div
+                    <span
                       style={{
-                        fontSize: 13,
-                        fontWeight: 500,
-                        whiteSpace: 'nowrap',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
+                        fontFamily: 'var(--font-mono)',
+                        fontSize: 11,
+                        color: 'var(--text-4)',
+                        width: 28,
+                        textAlign: 'right',
                       }}
                     >
-                      {r.apple.artistName} — {r.apple.name}
+                      {r.index}
+                    </span>
+                    <Artwork
+                      size={36}
+                      radius={5}
+                      kind="song"
+                      hue={artworkHueFromId(r.apple.id)}
+                      imgSrc={r.apple.artworkUrl}
+                    />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div
+                        style={{
+                          fontSize: 13,
+                          fontWeight: 500,
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                        }}
+                      >
+                        {r.apple.artistName} — {r.apple.name}
+                      </div>
+                      <a
+                        href={href}
+                        style={{
+                          fontSize: 11.5,
+                          color: 'var(--accent)',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          display: 'block',
+                        }}
+                      >
+                        {href}
+                      </a>
                     </div>
                     <a
-                      href={r.apple.catalogUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                      href={href}
+                      aria-label={t('openAria')}
                       style={{
-                        fontSize: 11.5,
-                        color: 'var(--accent)',
-                        whiteSpace: 'nowrap',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        display: 'block',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        width: 32,
+                        height: 32,
+                        borderRadius: 8,
+                        color: 'var(--text-3)',
+                        border: '1px solid var(--hairline)',
                       }}
                     >
-                      {r.apple.catalogUrl}
+                      <Icon.Arrow size={14} />
                     </a>
-                  </div>
-                  <a
-                    href={r.apple.catalogUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label={t('openAria')}
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      width: 32,
-                      height: 32,
-                      borderRadius: 8,
-                      color: 'var(--text-3)',
-                      border: '1px solid var(--hairline)',
-                    }}
-                  >
-                    <Icon.Arrow size={14} />
-                  </a>
-                </li>
-              ))}
+                  </li>
+                );
+              })}
             </ol>
           </div>
 
-          {/* m3u8 panel */}
+          {/* Shortcut bulk-add panel */}
           <div className="panel" style={{ padding: 18 }}>
             <SectionHeader
               title={
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-                  <Icon.Disc size={15} /> {t('m3u8Title')}
+                  <Icon.Disc size={15} /> {t('shortcutTitle')}
                 </span>
               }
-              desc={t('m3u8Desc')}
+              desc={t('shortcutDesc')}
             />
+            <div
+              style={{
+                fontSize: 11.5,
+                color: 'var(--text-4)',
+                marginBottom: 10,
+                lineHeight: 1.5,
+                padding: '8px 10px',
+                borderRadius: 6,
+                border: '1px solid var(--hairline)',
+                background: 'color-mix(in oklch, var(--accent) 8%, transparent)',
+              }}
+            >
+              {t('shortcutPlatformWarn')}
+            </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <Button
-                variant="primary"
-                icon={<Icon.Arrow size={14} />}
-                onClick={onDownloadM3U}
-                disabled={rows.length === 0}
-              >
-                {t('downloadM3u8')}
+              <Button variant="primary" icon={<Icon.Arrow size={14} />} onClick={onInstallShortcut}>
+                {t('shortcutInstall')}
               </Button>
-              <Pill tone="warn" style={{ padding: '8px 10px', alignSelf: 'flex-start' }}>
-                <Icon.Alert size={12} /> {t('iosWarn')}
-              </Pill>
-              <details>
-                <summary
-                  style={{
-                    cursor: 'pointer',
-                    fontSize: 12,
-                    color: 'var(--text-3)',
-                    padding: '4px 0',
-                  }}
-                >
-                  {t('preview')}
-                </summary>
-                <pre
-                  style={{
-                    marginTop: 8,
-                    padding: 10,
-                    fontSize: 11,
-                    fontFamily: 'var(--font-mono)',
-                    background: 'var(--elev)',
-                    border: '1px solid var(--hairline)',
-                    borderRadius: 6,
-                    color: 'var(--text-3)',
-                    maxHeight: 220,
-                    overflow: 'auto',
-                    whiteSpace: 'pre',
-                  }}
-                >
-                  {m3u8Body || '—'}
-                </pre>
-              </details>
+              <Button
+                variant="secondary"
+                icon={<Icon.Copy size={13} />}
+                onClick={onCopyShortcutList}
+              >
+                {t('shortcutCopyList')}
+              </Button>
+              <ol
+                style={{
+                  fontSize: 12,
+                  color: 'var(--text-4)',
+                  lineHeight: 1.6,
+                  marginTop: 4,
+                  paddingLeft: 18,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 4,
+                }}
+              >
+                <li>{t('shortcutHint1')}</li>
+                <li>{t('shortcutHint2')}</li>
+                <li>{t('shortcutHint3')}</li>
+              </ol>
             </div>
           </div>
         </section>
