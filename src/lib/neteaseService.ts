@@ -76,10 +76,18 @@ export function extractPlaylistId(idOrUrl: string): string {
 
   try {
     const url = new URL(normalized);
+    // Reject non-NetEase hosts up front. Without this, any URL with an
+    // `?id=<digits>` query (e.g. `https://example.com/playlist?id=12345`)
+    // would parse cleanly even though it has nothing to do with NetEase.
+    // Match `music.163.com` and any subdomain (e.g. `y.music.163.com`).
+    if (url.hostname !== 'music.163.com' && !url.hostname.endsWith('.music.163.com')) {
+      throw new HttpError(400, 'Not a NetEase playlist URL');
+    }
     const id = url.searchParams.get('id');
     if (id && NUMERIC_ID_PATTERN.test(id)) return id;
-  } catch {
-    // Fall through to the generic error below.
+  } catch (err) {
+    // Re-throw our own HttpError; swallow URL-parse errors to fall through.
+    if (err instanceof HttpError) throw err;
   }
 
   throw new HttpError(400, `Could not parse NetEase playlist id from: ${idOrUrl}`);

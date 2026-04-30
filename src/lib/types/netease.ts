@@ -33,7 +33,7 @@ export interface NeteaseRawSong {
   id: number;
   name: string;
   artists: { name: string }[];
-  album: { name?: string; picUrl?: string };
+  album?: { name?: string; picUrl?: string };
   /** Duration in milliseconds. */
   duration: number;
 }

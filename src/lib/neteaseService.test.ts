@@ -23,8 +23,25 @@ describe('extractPlaylistId', () => {
     expect(extractPlaylistId('https://y.music.163.com/m/playlist?id=12345')).toBe('12345');
   });
 
-  it('parses the m.music.163.com mobile URL', () => {
+  it('parses the /m/ mobile-path URL', () => {
+    // Note: the host has no `m.` subdomain; `m/` is a path segment under
+    // music.163.com. Distinct from the y.music.163.com mobile subdomain.
     expect(extractPlaylistId('https://music.163.com/m/playlist?id=12345')).toBe('12345');
+  });
+
+  it('rejects a URL on an unrelated host', () => {
+    // Without a hostname check, `?id=<digits>` on any domain would parse —
+    // pin the function to NetEase URLs only.
+    expect(() => extractPlaylistId('https://example.com/playlist?id=12345')).toThrow(HttpError);
+    expect(() => extractPlaylistId('https://example.com/playlist?id=12345')).toThrow(
+      /Not a NetEase playlist URL/,
+    );
+  });
+
+  it('still accepts the y.music.163.com mobile subdomain after host check', () => {
+    // Sanity-check that the new host validation hasn't broken legitimate
+    // music.163.com subdomains.
+    expect(extractPlaylistId('https://y.music.163.com/m/playlist?id=12345')).toBe('12345');
   });
 
   it('returns a bare numeric id unchanged', () => {
@@ -165,8 +182,11 @@ describe('fetchPublicPlaylist', () => {
       expect(headers.get('referer')).toBe('https://music.163.com/');
     }
 
-    // Sanity-check the first URL is the v6 endpoint.
-    expect(String(fetchMock.mock.calls[0]?.[0])).toContain('/api/v6/playlist/detail?id=');
+    // Lock down the exact v6 URL build so a future template typo (e.g.
+    // dropping `?id=` or mis-spelling the path) is caught here.
+    expect(String(fetchMock.mock.calls[0]?.[0])).toBe(
+      `https://music.163.com/api/v6/playlist/detail?id=${PLAYLIST_ID}`,
+    );
   });
 
   it('throws HttpError(404) when v6 returns code !== 200 (private/missing)', async () => {
