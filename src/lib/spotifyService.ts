@@ -1,5 +1,5 @@
 import { HttpError } from './httpError';
-import type { SpotifyPlaylist, SpotifyTrack } from './types/spotify';
+import type { SourcePlaylist, SourceTrack } from './types/source';
 
 // We scrape Spotify's public embed page rather than calling the Web API.
 // Why: the Web API now requires a Premium subscription on every read path,
@@ -138,18 +138,18 @@ function splitArtists(subtitle: string | undefined): string[] {
     .filter(Boolean);
 }
 
-function normalizeTrack(raw: RawEmbedTrack): SpotifyTrack | null {
+function normalizeTrack(raw: RawEmbedTrack): SourceTrack | null {
   if (raw.entityType !== 'track') return null;
   if (typeof raw.uri !== 'string' || !raw.uri) return null;
 
-  const id = raw.uri.split(':').pop() ?? raw.uri;
+  const id = String(raw.uri.split(':').pop() ?? raw.uri);
   return {
+    sourceType: 'spotify',
     id,
     name: raw.title ?? '',
     artists: splitArtists(raw.subtitle),
     durationMs: typeof raw.duration === 'number' ? raw.duration : 0,
-    audioPreviewUrl: raw.audioPreview?.url,
-    spotifyUrl: `https://open.spotify.com/track/${id}`,
+    previewUrl: raw.audioPreview?.url,
   };
 }
 
@@ -187,7 +187,7 @@ const NEXT_DATA_PATTERN = /<script id="__NEXT_DATA__"[^>]*>([\s\S]+?)<\/script>/
  * `trackList`. Any structural failure raises an `HttpError` so the route
  * handler doesn't have to care which step blew up.
  */
-export async function fetchPublicPlaylistViaEmbed(idOrUrl: string): Promise<SpotifyPlaylist> {
+export async function fetchPublicPlaylistViaEmbed(idOrUrl: string): Promise<SourcePlaylist> {
   const id = extractPlaylistId(idOrUrl);
 
   const response = await fetch(`${SPOTIFY_EMBED_BASE}/${id}`, {
@@ -222,20 +222,20 @@ export async function fetchPublicPlaylistViaEmbed(idOrUrl: string): Promise<Spot
   }
 
   const trackList = Array.isArray(entity.trackList) ? entity.trackList : [];
-  const tracks: SpotifyTrack[] = [];
+  const tracks: SourceTrack[] = [];
   for (const raw of trackList) {
     const t = normalizeTrack(raw);
     if (t) tracks.push(t);
   }
 
   return {
+    sourceType: 'spotify',
     id,
     name: entity.name ?? '',
-    description: entity.description ?? '',
     // The embed exposes only an owner display name (as `subtitle`), not an id.
-    // Leave id empty rather than fabricating something the UI might key on.
-    owner: { id: '', displayName: entity.subtitle ?? '' },
-    imageUrl: pickCoverImageUrl(entity),
+    // SourcePlaylist's owner shape is intentionally id-less for cross-source symmetry.
+    owner: { displayName: entity.subtitle ?? '' },
+    coverUrl: pickCoverImageUrl(entity),
     // Embed truncates large playlists (≤100 user / ≤50 algorithmic). We don't
     // get a real total back, so report what we actually returned. Callers
     // should surface this honestly to the user.

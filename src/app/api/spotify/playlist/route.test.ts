@@ -31,18 +31,18 @@ describe('GET /api/spotify/playlist', () => {
 
   it('passes `url` through to the scraper and returns the playlist as JSON', async () => {
     fetchMock.mockResolvedValue({
+      sourceType: 'spotify',
       id: 'abc123',
       name: 'My Playlist',
-      description: '',
-      owner: { id: '', displayName: 'someone' },
+      owner: { displayName: 'someone' },
       totalTracks: 1,
       tracks: [
         {
+          sourceType: 'spotify',
           id: 't1',
           name: 'Hello',
           artists: ['Adele'],
           durationMs: 295000,
-          spotifyUrl: 'https://open.spotify.com/track/t1',
         },
       ],
     });
@@ -61,10 +61,10 @@ describe('GET /api/spotify/playlist', () => {
 
   it('falls back to `id` when `url` is absent', async () => {
     fetchMock.mockResolvedValue({
+      sourceType: 'spotify',
       id: 'abc123',
       name: '',
-      description: '',
-      owner: { id: '', displayName: '' },
+      owner: { displayName: '' },
       totalTracks: 0,
       tracks: [],
     });

@@ -137,20 +137,21 @@ describe('fetchPublicPlaylistViaEmbed', () => {
 
     const playlist = await fetchPublicPlaylistViaEmbed(PLAYLIST_ID);
 
+    expect(playlist.sourceType).toBe('spotify');
     expect(playlist.id).toBe(PLAYLIST_ID);
     expect(playlist.name).toBe('Test Mix');
-    expect(playlist.description).toBe('a description');
-    expect(playlist.owner).toEqual({ id: '', displayName: 'Owner Name' });
-    expect(playlist.imageUrl).toBe('https://i.scdn.co/cover/large.jpg');
+    expect(playlist.owner).toEqual({ displayName: 'Owner Name' });
+    expect(playlist.coverUrl).toBe('https://i.scdn.co/cover/large.jpg');
     expect(playlist.totalTracks).toBe(2);
     expect(playlist.tracks).toHaveLength(2);
 
     const [first, second] = playlist.tracks;
+    expect(first?.sourceType).toBe('spotify');
     expect(first?.id).toBe('1111111111111111111111');
+    expect(typeof first?.id).toBe('string');
     expect(first?.name).toBe('Solo Song');
     expect(first?.artists).toEqual(['Artist A']);
-    expect(first?.spotifyUrl).toBe('https://open.spotify.com/track/1111111111111111111111');
-    expect(first?.audioPreviewUrl).toBe('https://p.scdn.co/mp3-preview/abc');
+    expect(first?.previewUrl).toBe('https://p.scdn.co/mp3-preview/abc');
 
     expect(second?.artists).toEqual(['Artist B', 'Artist C', 'Artist D']);
 
