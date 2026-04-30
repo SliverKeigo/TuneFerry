@@ -2,14 +2,7 @@
 
 import TweaksPanel from '@/components/TweaksPanel';
 import * as Icon from '@/components/icons';
-import {
-  Button,
-  PageHeader,
-  Pill,
-  SectionHeader,
-  Spinner,
-  useToast,
-} from '@/components/primitives';
+import { Button, PageHeader, Pill, SectionHeader, Spinner } from '@/components/primitives';
 import { useStorefront } from '@/hooks/useStorefront';
 import { useTranslations } from 'next-intl';
 import { type FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
@@ -142,7 +135,6 @@ function AppearanceSection() {
 // ─── Apple Music token ──────────────────────────────────────────────────────
 
 function AppleTokenSection() {
-  const toast = useToast();
   const t = useTranslations('settings');
   const [state, setState] = useState<TokenState | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -199,16 +191,6 @@ function AppleTokenSection() {
       expired,
     };
   }, [state, t]);
-
-  const onCopy = useCallback(async () => {
-    if (!state) return;
-    try {
-      await navigator.clipboard.writeText(state.token);
-      toast({ message: t('tokenCopiedToast'), tone: 'ok' });
-    } catch {
-      toast({ message: t('clipboardError'), tone: 'err' });
-    }
-  }, [state, toast, t]);
 
   return (
     <section className="panel" style={{ padding: 18 }}>
@@ -286,11 +268,6 @@ function AppleTokenSection() {
               </code>
             </Row>
           )}
-          <Row label={t('tokenLabel')}>
-            <Button size="sm" variant="secondary" icon={<Icon.Copy size={13} />} onClick={onCopy}>
-              {t('tokenCopy')}
-            </Button>
-          </Row>
         </div>
       )}
     </section>
