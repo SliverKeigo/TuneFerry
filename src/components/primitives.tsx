@@ -67,11 +67,13 @@ export function Button({
   iconRight,
   children,
   style,
+  disabled,
   ...props
 }: ButtonProps) {
   return (
     <button
       type="button"
+      disabled={disabled}
       style={{
         display: 'inline-flex',
         alignItems: 'center',
@@ -79,14 +81,28 @@ export function Button({
         letterSpacing: -0.05,
         whiteSpace: 'nowrap',
         transition:
-          'transform var(--dur) var(--ease), background var(--dur) var(--ease), border-color var(--dur) var(--ease), filter var(--dur) var(--ease)',
+          'transform var(--dur) var(--ease), background var(--dur) var(--ease), border-color var(--dur) var(--ease), filter var(--dur) var(--ease), opacity var(--dur) var(--ease)',
         ...BUTTON_SIZES[size],
         ...BUTTON_VARIANTS[variant],
+        // Visual disabled state: native `disabled` already blocks clicks &
+        // sets `cursor: not-allowed`, but variant colors stay vivid without
+        // this — users mistake a disabled primary for an active one.
+        ...(disabled
+          ? {
+              opacity: 0.45,
+              cursor: 'not-allowed',
+              filter: 'saturate(0.55)',
+            }
+          : null),
         ...style,
       }}
-      onMouseDown={(e) => {
-        e.currentTarget.style.transform = 'translateY(1px)';
-      }}
+      onMouseDown={
+        disabled
+          ? undefined
+          : (e) => {
+              e.currentTarget.style.transform = 'translateY(1px)';
+            }
+      }
       onMouseUp={(e) => {
         e.currentTarget.style.transform = '';
       }}
