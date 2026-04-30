@@ -22,11 +22,11 @@
     "step3Desc": "可点击的深链列表 —— 外加一个 iOS Shortcut 一键批量加 playlist。"
   },
   "import": {
-    "publicOnly": "仅支持公开歌单。如有需要请先在 Spotify 把歌单设为公开。",
+    "publicOnly": "仅支持公开歌单。如有需要请先在 Spotify 或网易云音乐把歌单设为公开。",
     "eyebrow": "第 1 步 / 共 3 步",
-    "title": "导入 Spotify 歌单",
-    "desc": "粘贴一个公开的 Spotify 歌单链接，我们会把曲目拉过来。无需登录。",
-    "placeholder": "https://open.spotify.com/playlist/... 或歌单 ID",
+    "title": "导入歌单",
+    "desc": "粘贴一个公开的 Spotify 或网易云音乐歌单链接，我们会把曲目拉过来。无需登录。",
+    "placeholder": "Spotify 或网易云音乐歌单链接 —— 或裸歌单 ID",
     "fetching": "拉取中…",
     "fetch": "拉取歌单",
     "scrapingHint": "正在抓取公开 embed 页面…",
@@ -35,10 +35,11 @@
     "errorUnknownSource": "无法识别的链接。请提供公开的 Spotify 或网易云音乐歌单链接或 ID。",
     "fetchFailed": "拉取歌单失败。",
     "loadedToast": "已加载「{name}」—— 共 {count} 首。",
-    "tip1": "粘贴任意公开的 Spotify 歌单链接 —— 同时支持 <code>https://open.spotify.com/playlist/[id]?si=…</code> 和裸 ID。",
-    "tip2": "每个歌单最多 <strong>100 首</strong>（Spotify embed 限制）。Spotify 的算法歌单（如 Today's Top Hits）封顶 50。",
-    "tip3": "无需登录。我们不会接触到你的 Spotify 账号。",
-    "inputAria": "Spotify 歌单链接或 ID"
+    "tip1": "粘贴任意公开的 Spotify 或网易云音乐歌单链接。Spotify 用 <code>open.spotify.com/playlist/[id]</code>，网易云用 <code>music.163.com/playlist?id=[id]</code>。两者都支持裸 ID。",
+    "tip2": "Spotify 歌单上限 <strong>100 首</strong>（embed 限制；算法歌单如 Today's Top Hits 封顶 50）。网易云没有强制上限，但超大歌单可能被限流。",
+    "tip3": "无需登录。我们不会接触到你的 Spotify 或网易云账号。",
+    "tipNeteaseStorefront": "<strong>提示：</strong>网易云歌单多为华语歌曲。匹配 Apple Music 命中率更高的做法是把 <strong>Settings → Apple Music 区域</strong> 切到 <code>cn</code>、<code>hk</code> 或 <code>tw</code>。",
+    "inputAria": "歌单链接或 ID"
   },
   "match": {
     "loading": "加载匹配中…",

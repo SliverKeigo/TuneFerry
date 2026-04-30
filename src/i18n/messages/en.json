@@ -22,11 +22,11 @@
     "step3Desc": "Get a tappable deep-link list — plus an iOS Shortcut to bulk-add the whole playlist in one tap."
   },
   "import": {
-    "publicOnly": "Public playlists only. Set the playlist to public on Spotify first if needed.",
+    "publicOnly": "Public playlists only. Set the playlist to public on Spotify (or your NetEase account) first if needed.",
     "eyebrow": "Step 1 of 3",
-    "title": "Import a Spotify playlist",
-    "desc": "Paste a public Spotify playlist URL and we'll pull the tracks. No sign-in required.",
-    "placeholder": "https://open.spotify.com/playlist/... or playlist ID",
+    "title": "Import a playlist",
+    "desc": "Paste a public Spotify or NetEase Cloud Music playlist URL and we'll pull the tracks. No sign-in required.",
+    "placeholder": "Spotify or NetEase playlist URL — or a bare playlist ID",
     "fetching": "Fetching…",
     "fetch": "Fetch playlist",
     "scrapingHint": "Scraping the public embed page…",
@@ -35,10 +35,11 @@
     "errorUnknownSource": "Unrecognized URL. Please provide a public Spotify or NetEase playlist link or ID.",
     "fetchFailed": "Failed to fetch playlist.",
     "loadedToast": "Loaded \"{name}\" — {count} tracks.",
-    "tip1": "Paste any public Spotify playlist URL — works for both <code>https://open.spotify.com/playlist/[id]?si=…</code> and bare IDs.",
-    "tip2": "Up to <strong>100 tracks</strong> per playlist (Spotify embed limit). Spotify's algorithmic playlists like \"Today's Top Hits\" cap at 50.",
-    "tip3": "No sign-in. We never see your Spotify account.",
-    "inputAria": "Spotify playlist URL or ID"
+    "tip1": "Paste any public Spotify or NetEase playlist URL. Spotify uses <code>open.spotify.com/playlist/[id]</code>; NetEase uses <code>music.163.com/playlist?id=[id]</code>. Bare IDs also work.",
+    "tip2": "Up to <strong>100 tracks</strong> per Spotify playlist (embed limit; algorithmic playlists like \"Today's Top Hits\" cap at 50). NetEase has no enforced cap, but very large playlists may be rate-limited.",
+    "tip3": "No sign-in. We never see your Spotify or NetEase account.",
+    "tipNeteaseStorefront": "<strong>Tip:</strong> NetEase playlists are mostly Chinese songs. For better Apple Music match rates, switch your storefront to <code>cn</code>, <code>hk</code>, or <code>tw</code> in <strong>Settings → Apple Music storefront</strong>.",
+    "inputAria": "Playlist URL or ID"
   },
   "match": {
     "loading": "Loading match…",

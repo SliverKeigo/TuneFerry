@@ -175,6 +175,23 @@ export default function ImportPage() {
             })}
           </li>
           <li>{t('tip3')}</li>
+          <li>
+            {t.rich('tipNeteaseStorefront', {
+              code: (chunks) => (
+                <code
+                  style={{
+                    fontSize: 12,
+                    fontFamily: 'var(--font-mono)',
+                    color: 'var(--text-3)',
+                    wordBreak: 'break-all',
+                  }}
+                >
+                  {chunks}
+                </code>
+              ),
+              strong: (chunks) => <strong>{chunks}</strong>,
+            })}
+          </li>
         </ul>
       </div>
     </main>
