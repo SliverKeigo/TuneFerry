@@ -32,6 +32,7 @@
     "scrapingHint": "Scraping the public embed page…",
     "errorNotFound": "Playlist not found or private — make sure the link is publicly accessible.",
     "errorBadGateway": "Spotify changed their embed page — please try again, or report this.",
+    "errorUnknownSource": "Unrecognized URL. Please provide a public Spotify or NetEase playlist link or ID.",
     "fetchFailed": "Failed to fetch playlist.",
     "loadedToast": "Loaded \"{name}\" — {count} tracks.",
     "tip1": "Paste any public Spotify playlist URL — works for both <code>https://open.spotify.com/playlist/[id]?si=…</code> and bare IDs.",

@@ -2,6 +2,7 @@
 
 import * as Icon from '@/components/icons';
 import { Button, PageHeader, Pill, Spinner, useToast } from '@/components/primitives';
+import { detectSource } from '@/lib/sourceDetector';
 import type { SourcePlaylist } from '@/lib/types/source';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
@@ -31,10 +32,20 @@ export default function ImportPage() {
       const trimmed = input.trim();
       if (!trimmed || loading) return;
 
+      // Route to spotify or netease API based on input shape. Detector is
+      // pure / lenient — service layers do final validation.
+      const detected = detectSource(trimmed);
+      if (!detected) {
+        setError({ message: t('errorUnknownSource'), status: 0 });
+        return;
+      }
+
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch(`/api/spotify/playlist?url=${encodeURIComponent(trimmed)}`);
+        const res = await fetch(
+          `/api/${detected.sourceType}/playlist?url=${encodeURIComponent(trimmed)}`,
+        );
         if (!res.ok) {
           const body = (await res.json().catch(() => null)) as ApiErrorBody | null;
           const status = body?.error?.status ?? res.status;

@@ -32,6 +32,7 @@
     "scrapingHint": "正在抓取公开 embed 页面…",
     "errorNotFound": "歌单未找到或非公开 —— 请确认链接可被公开访问。",
     "errorBadGateway": "Spotify 改了 embed 页面 —— 请重试，或反馈给我们。",
+    "errorUnknownSource": "无法识别的链接。请提供公开的 Spotify 或网易云音乐歌单链接或 ID。",
     "fetchFailed": "拉取歌单失败。",
     "loadedToast": "已加载「{name}」—— 共 {count} 首。",
     "tip1": "粘贴任意公开的 Spotify 歌单链接 —— 同时支持 <code>https://open.spotify.com/playlist/[id]?si=…</code> 和裸 ID。",
