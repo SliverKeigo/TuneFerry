@@ -30,7 +30,7 @@ interface TokenState {
   payload: JwtPayload;
 }
 
-type PresetKey = 'presetUs' | 'presetGb' | 'presetJp' | 'presetHk' | 'presetTw';
+type PresetKey = 'presetUs' | 'presetGb' | 'presetJp' | 'presetHk' | 'presetTw' | 'presetNg';
 
 const PRESETS: { value: string; key: PresetKey }[] = [
   { value: 'us', key: 'presetUs' },
@@ -38,6 +38,7 @@ const PRESETS: { value: string; key: PresetKey }[] = [
   { value: 'jp', key: 'presetJp' },
   { value: 'hk', key: 'presetHk' },
   { value: 'tw', key: 'presetTw' },
+  { value: 'ng', key: 'presetNg' },
 ];
 
 export default function SettingsPage() {
