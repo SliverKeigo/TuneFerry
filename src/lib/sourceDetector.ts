@@ -26,7 +26,12 @@ const SPOTIFY_BARE_ID_PATTERN = /^[A-Za-z0-9]{22}$/;
  *  PIN, a year, …) while still accepting any plausible NetEase ID. */
 const NETEASE_BARE_ID_PATTERN = /^\d{6,}$/;
 
-const SPOTIFY_PLAYLIST_PATH = /\/playlist\/([^/?#]+)/;
+// `/playlist/<id>` followed by either a path separator or end-of-string.
+// The trailing `(?:/|$)` is what makes whitespace inside the URL fail
+// cleanly: a space gets URL-encoded into `%20`, which neither matches the
+// base62 character class nor the segment terminator, so the match returns
+// null instead of leaking a truncated ID.
+const SPOTIFY_PLAYLIST_PATH = /\/playlist\/([A-Za-z0-9]+)(?:\/|$)/;
 
 /**
  * Detect which streaming source an input belongs to and pull out its ID.
@@ -66,18 +71,28 @@ export function detectSource(input: string): DetectedSource | null {
     }
 
     // NetEase: `music.163.com` and any subdomain (e.g. `y.music.163.com`).
+    // We require the word `playlist` to appear in either the pathname or the
+    // hash before extracting an `id`, otherwise `/song?id=...`,
+    // `/album?id=...`, `/artist?id=...`, etc. would be misclassified as
+    // playlist URLs (they all share the same `id=` query shape).
     if (host === 'music.163.com' || host.endsWith('.music.163.com')) {
-      const id = extractNeteaseIdFromUrl(url, trimmed);
-      if (id) {
-        return { sourceType: 'netease', id, input: trimmed };
+      const isPlaylist =
+        /\/playlist(\b|\/|\?|$)/.test(url.pathname) || /\/playlist(\b|\/|\?)/.test(url.hash);
+      if (isPlaylist) {
+        const id = extractNeteaseIdFromUrl(url, trimmed);
+        if (id) {
+          return { sourceType: 'netease', id, input: trimmed };
+        }
       }
     }
   }
 
   // ---- Bare ID detection ---------------------------------------------------
-  // Order matters: pure-digit check first, since a 22-char base62 string
-  // can't be all digits long enough to overlap (Spotify IDs always include
-  // letters — but we still favor digits-first for explicit precedence).
+  // Order matters: the two regexes can technically overlap (a 22-char string
+  // of all digits would match both ≥6-digit NetEase and 22-char base62
+  // Spotify), so we route digits-only inputs to NetEase first. Organic
+  // Spotify IDs always include letters, so this precedence is safe in
+  // practice — and makes the routing explicit rather than implicit.
   if (NETEASE_BARE_ID_PATTERN.test(trimmed)) {
     return { sourceType: 'netease', id: trimmed, input: trimmed };
   }

@@ -99,6 +99,14 @@ describe('detectSource', () => {
     });
   });
 
+  it('detects a bare numeric NetEase ID at the 6-digit boundary', () => {
+    expect(detectSource('123456')).toEqual({
+      sourceType: 'netease',
+      id: '123456',
+      input: '123456',
+    });
+  });
+
   // --- Whitespace / negative paths -----------------------------------------
   it('trims surrounding whitespace before parsing', () => {
     const padded = `  https://open.spotify.com/playlist/${SPOTIFY_ID}  `;
@@ -143,5 +151,27 @@ describe('detectSource', () => {
 
   it('returns null for a Spotify URL without a /playlist/ segment', () => {
     expect(detectSource('https://open.spotify.com/track/abc123')).toBeNull();
+  });
+
+  // --- Non-playlist NetEase URLs (I-1) -------------------------------------
+  it('returns null for a NetEase /song URL (not a playlist)', () => {
+    expect(detectSource('https://music.163.com/song?id=1234567')).toBeNull();
+  });
+
+  it('returns null for a NetEase hash-routed /song URL (not a playlist)', () => {
+    expect(detectSource('https://music.163.com/#/song?id=1234567')).toBeNull();
+  });
+
+  it('returns null for a NetEase /album URL (not a playlist)', () => {
+    expect(detectSource('https://music.163.com/album?id=1234567')).toBeNull();
+  });
+
+  // --- Whitespace-in-URL ID rejection (I-2) --------------------------------
+  it('returns null for a Spotify playlist URL with whitespace inside the ID', () => {
+    expect(detectSource(`https://open.spotify.com/playlist/${SPOTIFY_ID} hello`)).toBeNull();
+  });
+
+  it('returns null for a NetEase playlist URL with whitespace inside the ID', () => {
+    expect(detectSource('https://music.163.com/playlist?id=12345 hello')).toBeNull();
   });
 });
