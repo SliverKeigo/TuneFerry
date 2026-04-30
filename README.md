@@ -2,17 +2,17 @@
 
 **English** · [简体中文](./README.zh-CN.md)
 
-Migrate **public** Spotify playlists to Apple Music. Paste any `open.spotify.com/playlist/...` URL and TuneFerry fuzzy-matches every track against the Apple Music catalog, then hands you a tappable Apple Music deep-link list (plus an iOS Shortcut for one-tap bulk add) to bring it home.
+Migrate **public** Spotify or NetEase Cloud Music playlists to Apple Music. Paste any `open.spotify.com/playlist/...` or `music.163.com/playlist?id=...` URL and TuneFerry fuzzy-matches every track against the Apple Music catalog, then hands you a tappable Apple Music deep-link list (plus an iOS Shortcut for one-tap bulk add) to bring it home.
 
 > **Zero subscriptions, zero API keys.** TuneFerry reads Spotify by scraping the public embed page (the same data Spotify shows to anyone visiting your playlist URL — no Premium, no OAuth, no client secret). It reads Apple Music with a WebPlay-scraped Developer Token. Apple's "add to library/playlist" still happens on your own device — TuneFerry generates the deep links, you tap.
 
 ## How it works
 
 ```
-Public Spotify playlist URL
+Public playlist URL (Spotify / NetEase)
         │
         ▼
-   [/import]   ←─ paste URL, fetch via open.spotify.com/embed/<id>
+   [/import]   ←─ paste URL, auto-detect source, fetch via embed scrape or v6 API
         │
         ▼
    POST /api/match   ←─ fuzzy match (token Jaccard + duration penalty)
@@ -30,8 +30,9 @@ Public Spotify playlist URL
 - **Styling:** OKLCH CSS-variable token system + inline styles + a small `primitives.tsx` component library. No UI framework, no CSS Modules. Responsive layout via utility classes in `globals.css` with a single 820px breakpoint.
 - **i18n:** [next-intl](https://next-intl-docs.vercel.app/) 4.x, client-only mode (no URL routing). EN / ZH messages in `src/i18n/messages/`. Locale switches live on the existing tweaks store (Settings → Appearance → Language).
 - **Spotify:** Embed-page scraping (`https://open.spotify.com/embed/playlist/<id>`). Pulls the SSR'd `__NEXT_DATA__` JSON, walks to the track list. **No OAuth, no API keys, no env vars.**
+- **NetEase Cloud Music:** Two-stage public-API fetch (`/api/v6/playlist/detail` for meta + trackIds, then batched `/api/song/detail`). Anonymous, no cookies, no encryption. URL parser handles 4 NetEase URL forms + bare numeric IDs.
 - **Apple Music:** Catalog search via `amp-api.music.apple.com` with a WebPlay-scraped Developer Token. Fuzzy matching written from scratch (token Jaccard + duration penalty). No `fuse.js` / `string-similarity` — ~30 lines.
-- **Quality:** Biome (lint + format + import sort), TypeScript strict, Vitest (67 tests across 8 files — covers `src/lib/**`, `src/app/api/**` route handlers, and pure helpers under `src/hooks/**`), husky pre-commit hook.
+- **Quality:** Biome (lint + format + import sort), TypeScript strict, Vitest (**121 tests across 11 files** as of multi-source migration — covers `src/lib/**`, `src/app/api/**` route handlers, and pure helpers under `src/hooks/**`), husky pre-commit hook.
 
 ## Project Layout
 
@@ -51,6 +52,8 @@ AM-API/
 │   │       ├── apple-music/
 │   │       │   ├── developer-token/route.ts
 │   │       │   └── catalog/search/route.ts
+│   │       ├── netease/
+│   │       │   └── playlist/route.ts         # GET — public playlist via /api/v6 + /api/song/detail
 │   │       ├── spotify/
 │   │       │   └── playlist/route.ts        # GET — public playlist via embed scrape
 │   │       └── match/route.ts                # POST — Apple catalog fuzzy match
@@ -68,8 +71,10 @@ AM-API/
 │       ├── httpError.ts
 │       ├── nextHandler.ts           # withErrorHandler / pickQuery / pickHeader / pickInt
 │       ├── matchService.ts          # fuzzy match (token Jaccard + duration penalty)
+│       ├── neteaseService.ts        # extractPlaylistId + fetchPublicPlaylist (v6 + song/detail)
+│       ├── sourceDetector.ts        # detect SourceType from URL ('spotify' | 'netease')
 │       ├── spotifyService.ts        # extractPlaylistId + fetchPublicPlaylistViaEmbed
-│       └── types/{appleMusic,spotify}.ts
+│       └── types/{appleMusic,netease,source,spotify}.ts
 ├── next.config.js
 ├── tsconfig.json    # @/* → ./src/*
 ├── biome.json
@@ -129,6 +134,6 @@ npm run clean          # rm .next + coverage
 
 - **Biome** — lint + format + import sort. Config: [`biome.json`](./biome.json).
 - **TypeScript strict** across all of `src/`. Path alias `@/*` → `./src/*`.
-- **Vitest 2** covers `src/lib/**`, `src/app/api/**` route handlers, and pure hook helpers under `src/hooks/**` — **67 tests across 8 files** as of Phase 21. Vitest mirrors tsconfig's `@/*` → `./src/*` alias in `vitest.config.ts` so route tests can `import` the same way Next.js does.
+- **Vitest 2** covers `src/lib/**`, `src/app/api/**` route handlers, and pure hook helpers under `src/hooks/**` — **121 tests across 11 files** as of multi-source migration. Vitest mirrors tsconfig's `@/*` → `./src/*` alias in `vitest.config.ts` so route tests can `import` the same way Next.js does.
 - **Pre-commit gate**: `.husky/pre-commit` runs `npm run check` + `npm run typecheck` on every commit. Tests run in `validate` (CI).
 - **No backdoor**: don't `git commit --no-verify` unless really stuck.

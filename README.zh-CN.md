@@ -2,17 +2,17 @@
 
 [English](./README.md) · **简体中文**
 
-把**公开**的 Spotify playlist 迁移到 Apple Music。粘贴任意 `open.spotify.com/playlist/...` 链接，TuneFerry 在 Apple Music catalog 里 fuzzy 匹配每首曲，输出可点击的 Apple Music 深链列表（外加一个 iOS Shortcut 一键批量加 playlist），把歌单带回家。
+把**公开**的 Spotify 或网易云音乐 playlist 迁移到 Apple Music。粘贴任意 `open.spotify.com/playlist/...` 或 `music.163.com/playlist?id=...` 链接，TuneFerry 在 Apple Music catalog 里 fuzzy 匹配每首曲，输出可点击的 Apple Music 深链列表（外加一个 iOS Shortcut 一键批量加 playlist），把歌单带回家。
 
 > **零订阅、零 API key**。TuneFerry 通过爬 Spotify 公开 embed 页面读 playlist（任何访问 URL 的人都能看到的同一份数据，无需 Premium / OAuth / client secret）。Apple Music 这头用 WebPlay 刮取的 Developer Token。"add to library/playlist" 这一步发生在你自己的设备上 —— TuneFerry 生成 deep link，你点击。
 
 ## 工作流程
 
 ```
-公开的 Spotify playlist URL
+公开的 playlist URL（Spotify / 网易云）
         │
         ▼
-   [/import]   ←─ 粘 URL，通过 open.spotify.com/embed/<id> 拉数据
+   [/import]   ←─ 粘 URL，自动识别来源，走 embed 爬取或 v6 API 拉数据
         │
         ▼
    POST /api/match   ←─ fuzzy 匹配（token Jaccard + duration 惩罚）
@@ -30,8 +30,9 @@
 - **样式：** OKLCH CSS 变量 token + inline styles + 小型 `primitives.tsx` 组件库。不引 UI 框架，不用 CSS Modules。响应式 layout 走 `globals.css` 里的工具类，单一 820px 断点。
 - **i18n：** [next-intl](https://next-intl-docs.vercel.app/) 4.x，client-only 模式（不带 URL 路由）。EN / ZH messages 在 `src/i18n/messages/`，语言切换持久化在已有的 tweaks store 上（Settings → Appearance → Language）。
 - **Spotify：** Embed 页面爬取（`https://open.spotify.com/embed/playlist/<id>`）。从 SSR 嵌入的 `__NEXT_DATA__` JSON 里走到 trackList。**无 OAuth、无 API key、无 env 配置**。
+- **网易云音乐：** 公开 API 两段式 fetch（`/api/v6/playlist/detail` 拿 meta + trackIds，再分批 `/api/song/detail` 拿完整 song）。匿名访问，无 cookie，无加密。URL 解析器处理 4 种网易云 URL 形态 + 裸数字 ID。
 - **Apple Music：** 用 WebPlay-scraped Developer Token 调 `amp-api.music.apple.com`。匹配算法手写（token Jaccard + duration 惩罚），约 30 行。不引 `fuse.js` / `string-similarity`。
-- **质量：** Biome（lint + format + import 排序）、TypeScript strict、Vitest（**67 个测试，8 个文件** —— 覆盖 `src/lib/**`、`src/app/api/**` route handlers、`src/hooks/**` 纯函数）、husky pre-commit hook。
+- **质量：** Biome（lint + format + import 排序）、TypeScript strict、Vitest（**121 个测试，11 个文件** —— 多源迁移完成后 —— 覆盖 `src/lib/**`、`src/app/api/**` route handlers、`src/hooks/**` 纯函数）、husky pre-commit hook。
 
 ## 项目结构
 
@@ -51,6 +52,8 @@ AM-API/
 │   │       ├── apple-music/
 │   │       │   ├── developer-token/route.ts
 │   │       │   └── catalog/search/route.ts
+│   │       ├── netease/
+│   │       │   └── playlist/route.ts         # GET — 公开 playlist via /api/v6 + /api/song/detail
 │   │       ├── spotify/
 │   │       │   └── playlist/route.ts        # GET — 公开 playlist via embed scrape
 │   │       └── match/route.ts                # POST — Apple catalog fuzzy 匹配
@@ -68,8 +71,10 @@ AM-API/
 │       ├── httpError.ts
 │       ├── nextHandler.ts           # withErrorHandler / pickQuery / pickHeader / pickInt
 │       ├── matchService.ts          # fuzzy 匹配（token Jaccard + duration 惩罚）
+│       ├── neteaseService.ts        # extractPlaylistId + fetchPublicPlaylist（v6 + song/detail）
+│       ├── sourceDetector.ts        # 从 URL 识别 SourceType（'spotify' | 'netease'）
 │       ├── spotifyService.ts        # extractPlaylistId + fetchPublicPlaylistViaEmbed
-│       └── types/{appleMusic,spotify}.ts
+│       └── types/{appleMusic,netease,source,spotify}.ts
 ├── next.config.js
 ├── tsconfig.json    # @/* → ./src/*
 ├── biome.json
@@ -129,6 +134,6 @@ npm run clean          # 清 .next + coverage
 
 - **Biome** —— lint + format + import 排序。配置：[`biome.json`](./biome.json)。
 - **TypeScript strict** 覆盖整个 `src/`。路径别名 `@/*` → `./src/*`。
-- **Vitest 2** 覆盖 `src/lib/**`、`src/app/api/**` route handlers 和 `src/hooks/**` 纯函数 —— Phase 21 起 **67 个测试，8 个文件**。`vitest.config.ts` 镜像 tsconfig 的 `@/*` → `./src/*` 别名，让 route 测试能用同一种 import。
+- **Vitest 2** 覆盖 `src/lib/**`、`src/app/api/**` route handlers 和 `src/hooks/**` 纯函数 —— **121 个测试，11 个文件** —— 多源迁移完成后。`vitest.config.ts` 镜像 tsconfig 的 `@/*` → `./src/*` 别名，让 route 测试能用同一种 import。
 - **Pre-commit 门禁：** `.husky/pre-commit` 每次 commit 跑 `check` + `typecheck`。测试在 `validate`（CI）里跑。
 - **不要随便 `git commit --no-verify`**，除非真的卡住。

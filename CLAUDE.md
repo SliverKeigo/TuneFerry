@@ -80,8 +80,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - 加新文案先在 `en.json` 加 key、立刻同步 `zh.json`（结构必须一一对应，否则 next-intl 在缺失语言下静默 fallback 到 key 字符串）
 - Locale 切换在 Settings → Appearance → Language（English / 中文）
 - **`t` 引用不稳定，绝不要进数据获取 / 远程调用 effect 的 deps 列表** —— next-intl 在 locale 变化时返回新 `t`，会让 effect 重跑、重发 fetch、覆盖用户已编辑的本地状态。catch 路径需要翻译时用 ref：`const tRef = useRef(t); tRef.current = t;` 然后 `tRef.current('key')`，把 `t` 排除在 deps 之外。错误状态优先存 key（discriminated union），渲染时才翻译，这样 locale 变化时错误文案能跟着切换
+- **导入页 tip 必须 source-agnostic**：`import.tip*` 不要写死 "Spotify"，要兼容多源（C2 已重写）。新加 source 时同步更新这些 tip 的措辞
 
-## Spotify 集成约定
+## 数据源集成约定
+
+### Spotify
 
 **唯一路径：embed 页面爬取**。Spotify Web API 自 2024 年起被 Premium 锁，整套 OAuth 已删。
 
@@ -94,6 +97,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Risk profile 和 Apple WebPlay-scraped token 一样：非官方、Spotify 改前端就坏。文档要明示
 
 **没有 SPOTIFY_* env 变量。`.env` 完全没 Spotify 字段**。如果未来想拉私有 playlist，只能要求用户订阅 Spotify Premium 重新加 OAuth 流（git history `e2c4...` 之前的版本可参考）。
+
+### NetEase
+
+- **唯一路径：v6 + song/detail 两段式 fetch**。`fetchPublicPlaylist(idOrUrl, signal?)` 在 `src/lib/neteaseService.ts`：先 GET `/api/v6/playlist/detail?id=<id>` 拿 playlist meta + `trackIds[]`，再 GET `/api/song/detail?ids=[<csv>]` 分批（chunks of 100）拿完整 song 数据。**v6 只返回前 10 首完整 track**，所以必须二段补全
+- 数据源 = `https://music.163.com`（无加密、无 cookie、公开匿名访问）
+- 需要带 desktop User-Agent + `Referer: https://music.163.com/` 的 fetch
+- v6 字段（`ar` / `al` / `dt`）和 song/detail 字段（`artists` / `album` / `duration`）名字不一样 —— 我们**只走 song/detail 一条映射路径**避免双 schema
+- `extractPlaylistId(idOrUrl)` 处理 4 种 URL 形态：`music.163.com/playlist?id=`、`music.163.com/#/playlist?id=`、`music.163.com/m/playlist?id=`、`y.music.163.com/m/playlist?id=`，外加裸数字 ID。host 必须以 `music.163.com` 结尾
+- **限制**：私有歌单 v6 返回 `code !== 200` → `HttpError(404)`。HTTP 429 直接抛 `HttpError(429)`
+- AbortSignal 全链路透传（client cancel → route → service → fetch）
+- **Storefront caveat**：网易云歌单 99% 是华语歌，默认 storefront `us` 命中率低。Import 页 tip 已提示用户切到 `cn` / `hk` / `tw`，但代码不自动切（用户手动 Settings 改）
 
 ## Apple Music 约定（已定型，不要改）
 
@@ -111,6 +125,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 `src/lib/matchService.ts` 自实现，**不引第三方 fuzzy 库**（`fuse.js`/`string-similarity` 等都不要）。
 
+- **多源抽象层**：`src/lib/types/source.ts` 定义 `SourceType = 'spotify' | 'netease'`、`SourceTrack`、`SourcePlaylist`。所有 service（spotifyService / neteaseService）输出 `SourcePlaylist`，matchService 消费 `SourceTrack`。新加 source 只需新建 `<source>Service.ts` + 对应 route + 在 `sourceDetector.ts` 加 URL pattern + `SourceType` 加一项
 - **只走 fuzzy**：embed 没有 ISRC，没有 album name。`searchCatalog({ term: name + artist })` → token Jaccard 相似度，duration ±8s 加分。
 - 阈值：≥0.85 → `'high'`、≥0.6 → `'low'`、否则 `'none'`。`MatchConfidence` 类型只有这 3 档（之前的 `'exact'` 已删）
 - **不要加并发**：MVP 串行，100 首约 3 秒，够了。如果用户抱怨慢再 `Promise.all` 分批
