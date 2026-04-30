@@ -13,8 +13,7 @@ import {
 } from '@/components/primitives';
 import { useStorefront } from '@/hooks/useStorefront';
 import type { AppleSongLite, MatchConfidence, MatchResult } from '@/lib/matchService';
-import type { SourceTrack } from '@/lib/types/source';
-import type { SpotifyPlaylist } from '@/lib/types/spotify';
+import type { SourcePlaylist, SourceTrack } from '@/lib/types/source';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -90,9 +89,9 @@ function MatchPageContent() {
   const [storefront] = useStorefront();
   const t = useTranslations('match');
 
-  const spotifyId = params.get('spotify_id');
+  const sourceId = params.get('source_id');
 
-  const [playlist, setPlaylist] = useState<SpotifyPlaylist | null>(null);
+  const [playlist, setPlaylist] = useState<SourcePlaylist | null>(null);
   const [missing, setMissing] = useState(false);
   const [matching, setMatching] = useState(false);
   const [matchError, setMatchError] = useState<MatchError | null>(null);
@@ -107,22 +106,22 @@ function MatchPageContent() {
 
   // Read staged playlist from sessionStorage.
   useEffect(() => {
-    if (!spotifyId) {
+    if (!sourceId) {
       setMissing(true);
       return;
     }
     try {
-      const raw = sessionStorage.getItem(`tf.staged.${spotifyId}`);
+      const raw = sessionStorage.getItem(`tf.staged.v2.${sourceId}`);
       if (!raw) {
         setMissing(true);
         return;
       }
-      const parsed = JSON.parse(raw) as SpotifyPlaylist;
+      const parsed = JSON.parse(raw) as SourcePlaylist;
       setPlaylist(parsed);
     } catch {
       setMissing(true);
     }
-  }, [spotifyId]);
+  }, [sourceId]);
 
   // Run /api/match once we have the playlist.
   // Deps intentionally exclude `t` — `useTranslations` returns a fresh
@@ -197,16 +196,16 @@ function MatchPageContent() {
   }, []);
 
   const onContinue = useCallback(() => {
-    if (!spotifyId || !playlist) return;
+    if (!sourceId || !playlist) return;
     // Persist a final MatchResult[] reflecting user choices + inclusion flags.
     const finalized: (MatchResult & { included: boolean })[] = rows.map((r) => ({
       ...r.result,
       apple: r.chosen,
       included: r.included,
     }));
-    sessionStorage.setItem(`tf.matched.${spotifyId}`, JSON.stringify(finalized));
-    router.push(`/export?spotify_id=${encodeURIComponent(spotifyId)}`);
-  }, [router, rows, spotifyId, playlist]);
+    sessionStorage.setItem(`tf.matched.v2.${sourceId}`, JSON.stringify(finalized));
+    router.push(`/export?source_id=${encodeURIComponent(sourceId)}`);
+  }, [router, rows, sourceId, playlist]);
 
   // ── Render branches ─────────────────────────────────────────────────────────
   if (missing) {
@@ -351,7 +350,7 @@ function MatchRow({
   onPick: (cand: AppleSongLite | null) => void;
 }) {
   const { result, chosen, included } = row;
-  const sp: SourceTrack = result.source;
+  const track: SourceTrack = result.source;
   const tone = CONFIDENCE_TONE[result.confidence];
   const candidates = result.candidates;
 
@@ -372,9 +371,9 @@ function MatchRow({
         style={{ width: 16, height: 16, accentColor: 'var(--accent)', cursor: 'pointer' }}
       />
 
-      {/* Spotify side */}
+      {/* Source side */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
-        <Artwork size={40} radius={6} kind="song" hue={artworkHueFromId(sp.id)} />
+        <Artwork size={40} radius={6} kind="song" hue={artworkHueFromId(track.id)} />
         <div style={{ minWidth: 0 }}>
           <div
             style={{
@@ -384,9 +383,9 @@ function MatchRow({
               overflow: 'hidden',
               textOverflow: 'ellipsis',
             }}
-            title={sp.name}
+            title={track.name}
           >
-            {sp.name}
+            {track.name}
           </div>
           <div
             style={{
@@ -396,9 +395,9 @@ function MatchRow({
               overflow: 'hidden',
               textOverflow: 'ellipsis',
             }}
-            title={sp.artists.join(', ')}
+            title={track.artists.join(', ')}
           >
-            {sp.artists.join(', ')}
+            {track.artists.join(', ')}
           </div>
         </div>
       </div>

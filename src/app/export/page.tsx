@@ -74,17 +74,17 @@ function ExportPageContent() {
   const t = useTranslations('export');
   const locale = useLocale();
 
-  const spotifyId = params.get('spotify_id');
+  const sourceId = params.get('source_id');
   const [missing, setMissing] = useState(false);
   const [rows, setRows] = useState<ExportRow[] | null>(null);
 
   useEffect(() => {
-    if (!spotifyId) {
+    if (!sourceId) {
       setMissing(true);
       return;
     }
     try {
-      const raw = sessionStorage.getItem(`tf.matched.${spotifyId}`);
+      const raw = sessionStorage.getItem(`tf.matched.v2.${sourceId}`);
       if (!raw) {
         setMissing(true);
         return;
@@ -102,7 +102,7 @@ function ExportPageContent() {
     } catch {
       setMissing(true);
     }
-  }, [spotifyId]);
+  }, [sourceId]);
 
   const onCopyAll = useCallback(async () => {
     if (!rows) return;
@@ -141,12 +141,12 @@ function ExportPageContent() {
   }, [locale]);
 
   const onStartOver = useCallback(() => {
-    if (spotifyId) {
-      sessionStorage.removeItem(`tf.staged.${spotifyId}`);
-      sessionStorage.removeItem(`tf.matched.${spotifyId}`);
+    if (sourceId) {
+      sessionStorage.removeItem(`tf.staged.v2.${sourceId}`);
+      sessionStorage.removeItem(`tf.matched.v2.${sourceId}`);
     }
     router.push('/import');
-  }, [router, spotifyId]);
+  }, [router, sourceId]);
 
   if (missing) {
     return (

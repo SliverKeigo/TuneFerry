@@ -2,7 +2,7 @@
 
 import * as Icon from '@/components/icons';
 import { Button, PageHeader, Pill, Spinner, useToast } from '@/components/primitives';
-import type { SpotifyPlaylist } from '@/lib/types/spotify';
+import type { SourcePlaylist } from '@/lib/types/source';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { type FormEvent, useCallback, useState } from 'react';
@@ -41,13 +41,13 @@ export default function ImportPage() {
           const message = body?.error?.message ?? `Request failed (${res.status})`;
           throw Object.assign(new Error(message), { status });
         }
-        const playlist = (await res.json()) as SpotifyPlaylist;
-        sessionStorage.setItem(`tf.staged.${playlist.id}`, JSON.stringify(playlist));
+        const playlist = (await res.json()) as SourcePlaylist;
+        sessionStorage.setItem(`tf.staged.v2.${playlist.id}`, JSON.stringify(playlist));
         toast({
           message: t('loadedToast', { name: playlist.name, count: playlist.totalTracks }),
           tone: 'ok',
         });
-        router.push(`/match?spotify_id=${encodeURIComponent(playlist.id)}`);
+        router.push(`/match?source_id=${encodeURIComponent(playlist.id)}`);
       } catch (err) {
         const status =
           typeof (err as { status?: unknown }).status === 'number'

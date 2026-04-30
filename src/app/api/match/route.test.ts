@@ -69,6 +69,17 @@ describe('POST /api/match', () => {
     expect(matchManyMock).not.toHaveBeenCalled();
   });
 
+  it('returns 400 when a track is missing sourceType', async () => {
+    // Spread validTrack but drop sourceType — every other field is fine, so
+    // this isolates the sourceType requirement.
+    const { sourceType: _drop, ...withoutSourceType } = validTrack;
+    const res = await POST(postWith({ tracks: [withoutSourceType], storefront: 'us' }));
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as { error: { message: string } };
+    expect(body.error.message).toMatch(/sourceType/);
+    expect(matchManyMock).not.toHaveBeenCalled();
+  });
+
   it('returns 400 when over the per-request track cap', async () => {
     const many = Array.from({ length: 501 }, (_, i) => ({
       ...validTrack,

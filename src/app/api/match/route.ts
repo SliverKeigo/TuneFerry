@@ -35,15 +35,18 @@ function parseBody(raw: unknown): MatchRequestBody {
   }
   // Lightweight shape check — the route trusts the client to send normalized
   // SourceTrack objects (this endpoint is internal-only, called from /import).
+  // `sourceType` is required so the matcher / future per-source heuristics
+  // know which platform a row originated from.
   for (const t of tracks) {
     if (
       !t ||
       typeof t !== 'object' ||
+      typeof (t as SourceTrack).sourceType !== 'string' ||
       typeof (t as SourceTrack).id !== 'string' ||
       typeof (t as SourceTrack).name !== 'string' ||
       !Array.isArray((t as SourceTrack).artists)
     ) {
-      throw new HttpError(400, 'Each track must include id, name, and artists[].');
+      throw new HttpError(400, 'Each track must include sourceType, id, name, and artists[].');
     }
   }
   return { tracks: tracks as SourceTrack[], storefront };
