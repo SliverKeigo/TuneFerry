@@ -2,9 +2,9 @@
 
 [English](./README.md) · **简体中文**
 
-把**公开**的 Spotify playlist 迁移到 Apple Music。粘贴任意 `open.spotify.com/playlist/...` 链接，TuneFerry 在 Apple Music catalog 里 fuzzy 匹配每首曲，输出可点击的 deep link 列表 + `.m3u8` 文件。
+把**公开**的 Spotify playlist 迁移到 Apple Music。粘贴任意 `open.spotify.com/playlist/...` 链接，TuneFerry 在 Apple Music catalog 里 fuzzy 匹配每首曲，输出可点击的 Apple Music 深链列表（外加一个 iOS Shortcut 一键批量加 playlist），把歌单带回家。
 
-> **零订阅、零 API key**。TuneFerry 通过爬 Spotify 公开 embed 页面读 playlist（任何访问 URL 的人都能看到的同一份数据，无需 Premium / OAuth / client secret）。Apple Music 这头用 WebPlay 刮取的 Developer Token。"add to library" 这一步发生在你自己的设备上 —— TuneFerry 生成 deep link，你点击。
+> **零订阅、零 API key**。TuneFerry 通过爬 Spotify 公开 embed 页面读 playlist（任何访问 URL 的人都能看到的同一份数据，无需 Premium / OAuth / client secret）。Apple Music 这头用 WebPlay 刮取的 Developer Token。"add to library/playlist" 这一步发生在你自己的设备上 —— TuneFerry 生成 deep link，你点击。
 
 ## 工作流程
 
@@ -21,7 +21,7 @@
    [/match]    ←─ 置信度标签、手动选候选
         │
         ▼
-   [/export]   ←─ deep link 列表（一键复制）+ .m3u8 下载
+   [/export]   ←─ Apple Music 深链列表 + iOS Shortcut 批量加 playlist
 ```
 
 ## 技术栈
@@ -44,8 +44,8 @@ AM-API/
 │   │   ├── page.tsx                 # / 首页（hero + CTA）
 │   │   ├── import/page.tsx          # 第 1 步：粘贴 URL 或从 Spotify 账号选
 │   │   ├── match/page.tsx           # 第 2 步：审核匹配，手动覆盖
-│   │   ├── export/page.tsx          # 第 3 步：deep link + .m3u8
-│   │   ├── settings/page.tsx        # Storefront / Spotify session / Apple token
+│   │   ├── export/page.tsx          # 第 3 步：Apple Music 深链列表 + Shortcut 批量加面板
+│   │   ├── settings/page.tsx        # Storefront / 外观 / Apple token
 │   │   └── api/
 │   │       ├── health/route.ts
 │   │       ├── apple-music/
@@ -132,22 +132,3 @@ npm run clean          # 清 .next + coverage
 - **Vitest 2** 覆盖 `src/lib/**`、`src/app/api/**` route handlers 和 `src/hooks/**` 纯函数 —— Phase 21 起 **67 个测试，8 个文件**。`vitest.config.ts` 镜像 tsconfig 的 `@/*` → `./src/*` 别名，让 route 测试能用同一种 import。
 - **Pre-commit 门禁：** `.husky/pre-commit` 每次 commit 跑 `check` + `typecheck`。测试在 `validate`（CI）里跑。
 - **不要随便 `git commit --no-verify`**，除非真的卡住。
-
-## 路线图
-
-- [x] Phase 1–14 — Apple Music Library Organizer 原型（见 git history）
-- [x] Phase 15 — WebPlay scraped Developer Token + amp-api endpoint
-- [x] Phase 16 — 重构到 Next.js 14 App Router
-- [x] Phase 17 — 转型 TuneFerry：Spotify Web API + OAuth + ISRC matching wizard（之后又重做 —— 见 Phase 18）
-- [x] Phase 18 — **彻底放弃 Spotify Web API**（2024 年起被 Premium 锁定）。改成爬公开 playlist 的 embed 页面。删 OAuth 整套、删 ISRC 分级、简化 `/import` 和 `/settings`。净 −1500 / +400 行，零订阅
-- [x] Phase 19 — 测试覆盖回填：`/api/spotify/playlist` 和 `/api/match` 的 route handler 集成测试 + `pickQuery`/`pickHeader`/`pickInt` / `findFirstByQuery` / `getDeveloperToken` 单元测试。Vitest 加 `@/*` alias 镜像 tsconfig。**34 → 59 测试**
-- [x] Phase 20 — **next-intl i18n（EN / ZH，不带 URL 路由）**。Locale 持久化到 `useTweaks` store，`<html lang>` 同步，nav + 5 个页面完整 messages。新增 `sanitizeTweaks`（每个枚举字段 allow-list，含新加的 `locale`）+ `TweaksProvider` mounted gate 消除 SSR hydration 警告。Sidebar 加宽到 268px，TopNav 提到 64px 并在 1280 列内居中。**+8 测试覆盖 sanitizer / 自我治愈写路径**
-- [x] Phase 21 — **响应式 layout，断点 820px**（与 AppShell 的 mobile media query 同步）。每页 `<main>`、Match 行、sticky bar、Export 双列 grid、PageHeader、SectionHeader、Settings/Tweaks Row 全部走 `globals.css` 工具类让 `@media` 能 cascade。Mobile（≤820px）下三卡 / 五列 / 双列 grid 折成单列、PageHeader right 区下沉、候选 popover 收窄、sticky bar 提到 MobileNav 之上、写死的 oklch 暗色换成 `var(--bg-2)` 让浅色主题不再闪烁。Playwright 1440 / 768 / 375 三个 viewport 端到端验证
-- [x] Phase 22 — **Match 流程稳健化**。把 `/api/match` 的 effect 从 `t` 解耦（错误改为 discriminated union 存储，`t` 通过 ref 读最新引用），切语言不再触发重 match、不再静默清掉用户已手动编辑的 include / candidate。`AbortSignal` 全链路打通（浏览器 → `/api/match` route → `matchMany` → `appleFetch`，throttle sleep 也响应 abort），中断请求立即停止后端的 Apple Music 调用，不再浪费配额。`nextHandler.withErrorHandler` 对 `AbortError` 返回 499 并跳过日志噪音
-- [ ] 接下来 — 多 storefront 自动 retry（在 us 没匹配的曲自动 fallback hk/tw/jp）
-- [ ] 接下来 — `matchMany` 加并发（现在串行）
-- [ ] 接下来 — iOS Shortcut 导出（一键 add）
-- [ ] 接下来 — 前端 React 组件测试（jsdom + @testing-library/react）
-- [ ] 接下来 — 迁移历史持久化（用户跨 session 能继续）
-- [ ] 接下来 — locale / theme 持久化到 cookie，让 server `RootLayout` 直接读，彻底消除 hydration 后默认值→用户值的瞬时切换
-

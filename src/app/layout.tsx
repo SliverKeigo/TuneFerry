@@ -6,7 +6,7 @@ import './globals.css';
 export const metadata: Metadata = {
   title: 'TuneFerry — Spotify → Apple Music',
   description:
-    'Migrate Spotify playlists to Apple Music. Paste a public playlist URL or sign in to Spotify, match against the Apple Music catalog, and export deep-link / .m3u8 lists.',
+    'Migrate public Spotify playlists to Apple Music. Paste a playlist URL, fuzzy-match against the Apple Music catalog, and export a deep-link list plus an iOS Shortcut for one-tap bulk add.',
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

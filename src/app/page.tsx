@@ -1,7 +1,7 @@
 'use client';
 
 import * as Icon from '@/components/icons';
-import { Button, PageHeader, Pill } from '@/components/primitives';
+import { Button, PageHeader } from '@/components/primitives';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import type { ReactNode } from 'react';
@@ -49,19 +49,6 @@ export default function HomePage() {
           desc={t('step3Desc')}
         />
       </section>
-
-      {/* Beta strip */}
-      <div
-        style={{
-          marginTop: 28,
-          display: 'flex',
-          justifyContent: 'center',
-        }}
-      >
-        <Pill tone="warn" style={{ padding: '8px 14px', fontSize: 12, lineHeight: 1.4 }}>
-          <Icon.Alert size={13} /> {t('betaNote')}
-        </Pill>
-      </div>
     </main>
   );
 }

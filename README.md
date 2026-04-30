@@ -2,9 +2,9 @@
 
 **English** · [简体中文](./README.zh-CN.md)
 
-Migrate **public** Spotify playlists to Apple Music. Paste any `open.spotify.com/playlist/...` URL and TuneFerry fuzzy-matches every track against the Apple Music catalog, then hands you a tappable deep-link list plus an `.m3u8` file.
+Migrate **public** Spotify playlists to Apple Music. Paste any `open.spotify.com/playlist/...` URL and TuneFerry fuzzy-matches every track against the Apple Music catalog, then hands you a tappable Apple Music deep-link list (plus an iOS Shortcut for one-tap bulk add) to bring it home.
 
-> **Zero subscriptions, zero API keys.** TuneFerry reads Spotify by scraping the public embed page (the same data Spotify shows to anyone visiting your playlist URL — no Premium, no OAuth, no client secret). It reads Apple Music with a WebPlay-scraped Developer Token. Apple's "add to library" still happens on your own device — TuneFerry generates the deep links, you tap.
+> **Zero subscriptions, zero API keys.** TuneFerry reads Spotify by scraping the public embed page (the same data Spotify shows to anyone visiting your playlist URL — no Premium, no OAuth, no client secret). It reads Apple Music with a WebPlay-scraped Developer Token. Apple's "add to library/playlist" still happens on your own device — TuneFerry generates the deep links, you tap.
 
 ## How it works
 
@@ -21,7 +21,7 @@ Public Spotify playlist URL
    [/match]    ←─ confidence pills, manual candidate picker
         │
         ▼
-   [/export]   ←─ deep link list (copy all) + .m3u8 download
+   [/export]   ←─ Apple Music deep-link list + iOS Shortcut for bulk add
 ```
 
 ## Tech Stack
@@ -44,8 +44,8 @@ AM-API/
 │   │   ├── page.tsx                 # / Home (hero + CTAs)
 │   │   ├── import/page.tsx          # Step 1: paste URL or pick from Spotify account
 │   │   ├── match/page.tsx           # Step 2: review matches, manual override
-│   │   ├── export/page.tsx          # Step 3: deep links + .m3u8
-│   │   ├── settings/page.tsx        # Storefront / Spotify session / Apple token
+│   │   ├── export/page.tsx          # Step 3: Apple Music deep-link list + Shortcut bulk-add panel
+│   │   ├── settings/page.tsx        # Storefront / appearance / Apple token
 │   │   └── api/
 │   │       ├── health/route.ts
 │   │       ├── apple-music/
@@ -132,22 +132,3 @@ npm run clean          # rm .next + coverage
 - **Vitest 2** covers `src/lib/**`, `src/app/api/**` route handlers, and pure hook helpers under `src/hooks/**` — **67 tests across 8 files** as of Phase 21. Vitest mirrors tsconfig's `@/*` → `./src/*` alias in `vitest.config.ts` so route tests can `import` the same way Next.js does.
 - **Pre-commit gate**: `.husky/pre-commit` runs `npm run check` + `npm run typecheck` on every commit. Tests run in `validate` (CI).
 - **No backdoor**: don't `git commit --no-verify` unless really stuck.
-
-## Roadmap
-
-- [x] Phase 1–14 — Apple Music Library Organizer prototype (see git history)
-- [x] Phase 15 — WebPlay-scraped Developer Token + amp-api endpoint
-- [x] Phase 16 — Rebuilt on Next.js 14 App Router
-- [x] Phase 17 — Pivot to TuneFerry: Spotify Web API + OAuth + ISRC matching wizard (subsequently rebuilt — see Phase 18)
-- [x] Phase 18 — **Drop Spotify Web API entirely** (Premium-locked since 2024). Replaced with embed-page scraping for public playlists. Removed all OAuth, removed ISRC tier, simplified `/import` and `/settings`. Net −1500 / +400 lines, zero subscriptions
-- [x] Phase 19 — Test coverage backfill: route handler integration tests for `/api/spotify/playlist` and `/api/match`, plus unit tests for `pickQuery`/`pickHeader`/`pickInt`, `findFirstByQuery`, and `getDeveloperToken`. Added Vitest `@/*` alias mirroring tsconfig. **34 → 59 tests**
-- [x] Phase 20 — **i18n via next-intl** (EN / ZH, no URL routing). Locale persisted on the `useTweaks` store, `<html lang>` mirrored, full message bundles for nav + all five pages. Added `sanitizeTweaks` (allow-list per enum field, including the new `locale`) plus a `mounted` gate in `TweaksProvider` to eliminate SSR hydration warnings. Sidebar widened to 268px, TopNav grown to 64px and centered against a 1280px column. **+8 tests for the sanitizer / self-heal write path**
-- [x] Phase 21 — **Responsive layout, 820px breakpoint** (matches AppShell's mobile media query). All page `<main>`, the Match row, the sticky bar, the Export 2-col grid, PageHeader, SectionHeader, and Settings/Tweaks rows route through utility classes in `globals.css` so `@media` rules can cascade. Mobile (≤820px) collapses 3-card / 5-col / 2-col grids to a single column, stacks PageHeader right elements, narrows the candidate popover, lifts the sticky bar above MobileNav, and replaces a hardcoded oklch with `var(--bg-2)` so light theme no longer flashes dark. Verified end-to-end with Playwright across 1440 / 768 / 375 viewports
-- [x] Phase 22 — **Match-flow robustness.** Decoupled the `/api/match` effect from `t` (storing errors as a discriminated union and reading the latest translator via a ref) so a locale switch no longer re-runs match and silently wipes the user's manual include / candidate edits. Forwarded `AbortSignal` end-to-end (browser → `/api/match` route → `matchMany` → `appleFetch`) with an abort-aware throttle sleep, so cancelled requests stop burning Apple Music quota mid-playlist. `nextHandler.withErrorHandler` now returns 499 on `AbortError` and skips the noisy log
-- [ ] Next — Per-storefront retry for tracks that miss in `us` (auto-fallback to `hk`/`tw`/`jp`)
-- [ ] Next — Concurrency in `matchMany` for large playlists (currently serial)
-- [ ] Next — iOS Shortcut export (one-tap add via Shortcuts app)
-- [ ] Next — Client-side React component tests (jsdom + @testing-library/react)
-- [ ] Next — Persist migration history (so users can resume across sessions)
-- [ ] Next — Cookie-driven SSR locale + theme to fully eliminate the post-hydration default→user-value flicker
-

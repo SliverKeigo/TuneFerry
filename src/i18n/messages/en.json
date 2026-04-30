@@ -12,15 +12,14 @@
   "home": {
     "eyebrow": "Spotify → Apple Music",
     "title": "Move playlists. Keep your taste.",
-    "desc": "Paste a public Spotify playlist URL — we match every track against the Apple Music catalog and hand you a clean deep-link list (and a .m3u8) to bring it home.",
+    "desc": "Paste a public Spotify playlist URL — we match every track against the Apple Music catalog and hand you a clean deep-link list (plus an iOS Shortcut for one-tap bulk add) to bring it home.",
     "cta": "Migrate a playlist",
     "step1Title": "Import",
     "step1Desc": "Paste a public Spotify URL, or pick from your own playlists after signing in.",
     "step2Title": "Match",
     "step2Desc": "Fuzzy match against the Apple Music catalog, with confidence scores you can override.",
     "step3Title": "Export",
-    "step3Desc": "Get a tappable deep-link list — or a .m3u8 file for the macOS Music app.",
-    "betaNote": "Beta. Apple Music doesn't permit programmatic add-to-library, so the final step is a deep link list — you tap, Apple Music adds."
+    "step3Desc": "Get a tappable deep-link list — plus an iOS Shortcut to bulk-add the whole playlist in one tap."
   },
   "import": {
     "publicOnly": "Public playlists only. Set the playlist to public on Spotify first if needed.",

@@ -12,15 +12,14 @@
   "home": {
     "eyebrow": "Spotify → Apple Music",
     "title": "搬运歌单，保留品味。",
-    "desc": "粘贴一个公开的 Spotify 歌单链接 —— 我们会把每一首歌都和 Apple Music 曲库做匹配，并交回一份干净的深链列表（外加 .m3u8 文件）让你把它们带回家。",
+    "desc": "粘贴一个公开的 Spotify 歌单链接 —— 我们会把每一首歌都和 Apple Music 曲库做匹配，交回一份干净的深链列表（外加一个 iOS Shortcut 一键批量加 playlist）让你把它们带回家。",
     "cta": "迁移歌单",
     "step1Title": "导入",
     "step1Desc": "粘贴一个公开的 Spotify 链接，或登录后从你自己的歌单中选取。",
     "step2Title": "匹配",
     "step2Desc": "对 Apple Music 曲库做模糊匹配，置信度分数可手动覆盖。",
     "step3Title": "导出",
-    "step3Desc": "可点击的深链列表 —— 或一份适配 macOS Music 的 .m3u8 文件。",
-    "betaNote": "测试版。Apple Music 不允许程序化的「添加到资料库」操作，所以最后一步是深链列表 —— 你点，Apple Music 加。"
+    "step3Desc": "可点击的深链列表 —— 外加一个 iOS Shortcut 一键批量加 playlist。"
   },
   "import": {
     "publicOnly": "仅支持公开歌单。如有需要请先在 Spotify 把歌单设为公开。",

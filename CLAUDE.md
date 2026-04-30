@@ -104,6 +104,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **不再有 user library 写入功能**（Music User Token 路径已删，因为 scraped token 无法走 MusicKit.authorize()）
 - ISRC 查询：`/v1/catalog/{storefront}/songs?filter[isrc]={isrc}` —— `URLSearchParams` 处理 brackets 编码 OK，可以走 `appleFetch`
 - **本地 dev 坑**：shell 有 `http_proxy` / `https_proxy`（如 Clash）时 curl localhost:3000 会被丢进代理 → 503。用 `curl --noproxy '*'` 或 `unset http_proxy https_proxy`
+- **批量加 catalog 歌进 user playlist 的免费方案（iOS / iPadOS only）**：走 Shortcut 「TXT to Apple Music Playlist」（社区版，iCloud 链接 hardcode 在 `src/app/export/page.tsx` 的 `SHORTCUT_ICLOUD_URL`）。**关键 action 是「在 iTunes Store 尋找 / Search iTunes Store」** —— 它和 `搜尋 Apple Music`（不存在）/ `尋找音樂`（仅 library）不同，**搜 Apple 全 catalog 且返回 `iTunes 產品` 类型**，能直接喂给「加入...播放清單」action。Shortcut 输入格式：每行 `<title> <artist>`（用 Apple 已匹配的 `apple.name` + `apple.artistName`，不用 Spotify 原始字符串）。Export 页右侧 panel 有「复制歌曲列表」按钮输出这个格式 + iOS-only 警告 banner（`shortcutPlatformWarn` 文案）。**macOS 跑不通**：`加入音樂播放清單` action 在 macOS Sonoma+ 撞 `MPErrorDomain error 0` Apple 系统 bug，所有 Mac shortcut 都中招、与本 shortcut 实现无关。Mac 用户走左边深链 panel 手动加
+- **不要再尝试这些已穷举的死路**（Phase 23 验证过）：AppleScript `duplicate streaming track to library`（Apple 锁）、macOS Shortcuts `加入音樂播放清單` 接 URL（`MPErrorDomain error 0` 系统 bug）、iOS `尋找音樂` filter 找 catalog 歌（库里没就 0 命中）、`加入音樂資料庫` 接 URL string（类型不符）、UI Scripting 点 `+` 按钮（多曲 album 要 hover、a11y row 不暴露）。具体复盘见 `docs/shortcut-setup.md`（gitignored）
 
 ## 匹配算法约定
 
@@ -135,5 +137,5 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## 文档结构
 
 - `docs/` 在 `.gitignore`，本地临时产物
-- 没有 `specs/` 目录、没有 phase 实施文档 —— 设计讨论走对话，产出写进 README 的 Roadmap（README 只保留 8 个产品向章节：How it works / Tech Stack / Project Layout / Quick Start / Deployment / Scripts / Code Quality / Roadmap，不要重新加 Configuration / Limitations 这种内部细节章节）
+- 没有 `specs/` 目录、没有 phase 实施文档、**README 也不再有 Roadmap section** —— 设计讨论走对话，已完成的 phase 总结由 git log + commit message 承担。README 只保留 7 个产品向章节：How it works / Tech Stack / Project Layout / Quick Start / Deployment / Scripts / Code Quality（不要重新加 Roadmap / Configuration / Limitations 这种内部细节章节）
 - `ui-design/` 是当年 Apple Music Organizer 的原型参考（gitignored），实际 UI 在 `src/` 下
