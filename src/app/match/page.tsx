@@ -453,7 +453,9 @@ function MatchRow({
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <Pill tone={tone}>{t(CONFIDENCE_KEY[result.confidence])}</Pill>
         {(candidates.length > 0 || chosen !== null) && (
-          <details style={{ position: 'relative' }}>
+          // `name` puts every row's popover into one exclusive group — opening
+          // one closes the others. Native HTML feature, no JS state needed.
+          <details name="match-row-candidates" style={{ position: 'relative' }}>
             <summary
               style={{
                 listStyle: 'none',
